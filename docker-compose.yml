@@ -2,6 +2,7 @@ version: '3'
 services:
   backend:
     build: .
+    container_name: "faircombine-backend"
     ports:
       - "8000:80"
     depends_on:
@@ -12,6 +13,7 @@ services:
   redis:
     image: redis/redis-stack-server:latest
     command: redis-stack-server --save "60 1"
+    container_name: "faircombine-redis"
     expose:
       - "6379"
     ports:

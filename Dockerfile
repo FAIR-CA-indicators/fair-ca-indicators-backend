@@ -11,7 +11,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade -r /faircombine/requirements
 
 COPY ./app /faircombine/app
 
-ENV REDIS_URL="fair_combine-redis-1"
+ENV REDIS_URL="faircombine-redis"
 ENV REDIS_PORT=6379
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
