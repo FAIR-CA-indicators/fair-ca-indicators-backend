@@ -18,6 +18,10 @@ class TaskPriority(str, Enum):
     useful = "useful"
 
 
+class TaskStatusIn(BaseModel):
+    status: TaskStatus
+
+
 class Task(BaseModel):
     id: str
     name: str  # Is it necessary?

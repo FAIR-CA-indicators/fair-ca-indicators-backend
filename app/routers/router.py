@@ -4,8 +4,8 @@ from pydantic import AnyUrl
 from typing import List
 from redis.exceptions import ResponseError
 
-from app.models.session import Session
-from app.models.tasks import Task, TaskStatus, TaskDescription
+from app.models.session import Session, SessionSubjectIn
+from app.models.tasks import Task, TaskStatusIn, TaskDescription
 from app.metrics.assessments_lifespan import fair_assessments
 from app.redis_controller import redis_app
 
@@ -16,10 +16,10 @@ def create_tasks():
     return {}
 
 
-@base_router.get('/session/create', tags=["Sessions"])
-def create_session(subject_url: str) -> Session:
+@base_router.post('/session/create', tags=["Sessions"])
+def create_session(subject: SessionSubjectIn) -> Session:
     session_id = str(uuid4())
-    session = Session(id=session_id, subject=AnyUrl(subject_url, scheme="http"))
+    session = Session(id=session_id, subject=subject.path)
     session.tasks = create_tasks()
 
     redis_app.json().set(f"session:{session.id}", "$", obj=session.dict())
@@ -83,10 +83,10 @@ def task_description(task_name) -> TaskDescription:
         raise HTTPException(404, detail="No task with that name was found")
 
 
-@base_router.get("/session/{session_id}/tasks/{task_id}/edit", tags=["Assessments"])
-def update_task(session_id: str, task_id: str, task_status: TaskStatus) -> Task:
+@base_router.post("/session/{session_id}/tasks/{task_id}/edit", tags=["Assessments"])
+def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Task:
     try:
-        redis_app.json().set(f"session:{session_id}", f".tasks.{task_id}.status", task_status.value)
+        redis_app.json().set(f"session:{session_id}", f".tasks.{task_id}.status", task_status.status)
         task_json = redis_app.json().get(f"session:{session_id}", f".tasks.{task_id}")
     except ResponseError:
         raise HTTPException(status_code=404,

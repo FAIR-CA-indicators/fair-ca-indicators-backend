@@ -13,6 +13,9 @@ class SessionStatus(str, Enum):
     error = "error"
 
 
+class SessionSubjectIn(BaseModel):
+    path: Union[HttpUrl, FileUrl, FilePath]
+
 class Session(BaseModel):
     id: str
     subject: Union[HttpUrl, FileUrl, FilePath]
