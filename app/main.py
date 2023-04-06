@@ -1,7 +1,9 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.router import base_router
 from app.metrics.assessments_lifespan import get_tasks_definitions
+from app.dependencies.settings import get_settings
 
 tags_metadata = [
     {
@@ -29,31 +31,20 @@ describing how FAIR their model is.
 """
 
 
-
 app = FastAPI(
     title="FAIR Combine API",
     description=description,
     version="0.0.1",
-    # contacts=[
-    #     {
-    #         "name": "Valentin Grouès",
-    #         "email": "valentin.groues@uni.lu"
-    #     },
-    #     {
-    #         "name": "François Ancien",
-    #         "email": "francois.ancien@uni.lu"
-    #     },
-    #     {
-    #         "name": "Tom Gebhardt",
-    #         "email": "tom.gebh@gmail.com"
-    #     }
-    # ],
-    # license_info={
-    #     "name": "MIT License (MIT)",
-    #     "url": "https://mit-license.org/",
-    # },
     openapi_tags=tags_metadata,
     lifespan=get_tasks_definitions,
 )
 app.include_router(base_router)
 
+config = get_settings()
+origins = config.allowed_origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
