@@ -1,3 +1,5 @@
+import re
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from csv import DictReader
@@ -9,10 +11,15 @@ fair_assessments = {}
 
 @asynccontextmanager
 async def get_tasks_definitions(app: FastAPI):
+    regex = re.compile("^CA\-RDA\-([FAIR][1-9](\.[0-9])?)\-")
     def parse_line(line):
+        sub_group = regex.search(line["TaskName"]).groups()[0]
+        task_group = sub_group[0]
         return {
             line["TaskName"]: TaskDescription(
                 name=line["TaskName"],
+                group=task_group,
+                sub_group=sub_group,
                 priority=line["TaskPriority"].lower(),
                 question=line["TaskQuestion"],
                 short=line["TaskShortDescription"],
@@ -25,5 +32,4 @@ async def get_tasks_definitions(app: FastAPI):
         csv_reader = DictReader(file_handler, dialect="unix")
         [fair_assessments.update(parse_line(line)) for line in csv_reader]
 
-    print(fair_assessments)
     yield

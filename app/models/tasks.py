@@ -30,6 +30,7 @@ class Task(BaseModel):
     priority: TaskPriority = TaskPriority.essential
     status: TaskStatus = TaskStatus.queued
     comment: str = ""
+    disabled: bool = False
 
     score: Optional[float]
 
@@ -42,6 +43,8 @@ class Task(BaseModel):
 
 class TaskDescription(BaseModel):
     name: str
+    group: str
+    sub_group: str
     priority: str
     question: str
     short: str
