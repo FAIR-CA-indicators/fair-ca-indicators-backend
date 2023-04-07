@@ -5,6 +5,7 @@ from enum import Enum
 
 from .tasks import Task, TaskStatus, TaskPriority, Indicator
 from app.metrics.assessments_lifespan import fair_indicators
+from app.dependencies.settings import get_settings
 
 class SessionStatus(str, Enum):
     queued = "queued"
@@ -25,29 +26,31 @@ class SessionSubjectIn(BaseModel):
     path: Union[HttpUrl, FileUrl, FilePath] = None
     has_archive: Optional[bool]
     has_model: Optional[bool]
+    has_archive_metadata: Optional[bool]
     is_model_standard: Optional[bool]
     is_archive_standard: Optional[bool]
     is_model_metadata_standard: Optional[bool]
     is_archive_metadata_standard: Optional[bool]
     is_biomodel: Optional[bool]
     is_pmr: Optional[bool]
-    assessment_type: SubjectType
+    subject_type: SubjectType
 
-    @validator("assessment_type")
-    def manual_questions_answered(cls, assessment_type: str, values: dict):
-        if assessment_type is SubjectType.manual:
+    @validator("subject_type", always=True)
+    def manual_questions_answered(cls, subject_type: str, values: dict):
+        if subject_type is SubjectType.manual:
             if (
-                "has_archive" not in values
-                or "has_model" not in values
-                or "is_model_standard" not in values
-                or "is_archive_standard" not in values
-                or "is_model_metadata_standard" not in values
-                or "is_archive_metadata_standard" not in values
-                or "is_biomodel" not in values
-                or "is_pmr" not in values
+                values.get("has_archive") is None
+                or values.get("has_archive") is None
+                or values.get("has_archive") is None
+                or values.get("has_archive") is None
+                or values.get("has_archive") is None
+                or values.get("has_archive") is None
+                or values.get("has_archive") is None
+                or values.get("has_archive") is None
+                or values.get("has_archive") is None
             ):
                 raise ValueError("Self-assessments needs the form filled")
-        return assessment_type
+        return subject_type
 
 
 class Session(BaseModel):
@@ -67,7 +70,9 @@ class SessionHandler:
     def __init__(self, session_data: SessionSubjectIn) -> None:
         self.id = str(uuid4())
 
+        self.user_input = session_data
         self.session_model = Session(id=self.id, subject=session_data.path)
+        self.create_tasks()
 
         self.metadata = {}
         self.retrieve_metadata(self.session_model.subject)
@@ -105,14 +110,35 @@ class SessionHandler:
         self.session_model.score_all = sum([t.score for t in self.session_model.tasks.values() if t.status is not TaskStatus.not_applicable]) / self._count_applicable()
 
     def create_tasks(self):
-
         for indicator in fair_indicators.values():
             key, task = self._create_task(indicator)
             self.session_model.tasks[key] = task
 
     def _create_task(self, indicator: Indicator):
         task_id = str(uuid4())
-        return task_id, Task(id=task_id, name=indicator.name, priority=TaskPriority(indicator.priority), status=TaskStatus.queued, session_id=self.id)
+        task_status = TaskStatus.queued
+        disabled = False
+
+        if self.should_disable_task(indicator):
+            task_status = TaskStatus.failed
+            disabled = True
+
+        return task_id, Task(id=task_id, name=indicator.name, priority=TaskPriority(indicator.priority), status=task_status, session_id=self.id, disabled=disabled)
+
+    def should_disable_task(self, indicator: Indicator):
+        config = get_settings()
+
+        return (
+            self.user_input.subject_type is SubjectType.manual
+        ) and (
+            (
+                not self.user_input.has_archive
+                and indicator.name in config.archive_indicators
+            ) or (
+                not self.user_input.has_archive_metadata
+                and indicator.name in config.archive_metadata_indicators
+            )
+        )
 
     def json(self):
         return self.session_model.json()

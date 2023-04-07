@@ -10,13 +10,11 @@ from app.redis_controller import redis_app
 base_router = APIRouter()
 
 
-
 @base_router.post('/session', tags=["Sessions"])
 def create_session(subject: SessionSubjectIn) -> Session:
-    if subject.assessment_type is not SubjectType.manual:
+    if subject.subject_type is not SubjectType.manual:
         raise HTTPException(501, "The api only supports manual assessments at the moment")
     session_handler = SessionHandler(subject)
-    session_handler.create_tasks()
 
     redis_app.json().set(f"session:{session_handler.session_model.id}", "$", obj=session_handler.session_model.dict())
 
