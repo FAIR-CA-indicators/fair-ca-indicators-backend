@@ -7,8 +7,13 @@ from app.dependencies.settings import get_settings
 
 tags_metadata = [
     {
-        "name": "Assessments",
-        "description": "FAIR Combine assessments. Endpoints allow to retrieve the details of a specific assessment associated with a session, "
+        "name": "Indicators",
+        "description": "FAIR Combine assessments. Endpoints to retrieve the descriptions of the assessments done by the application "
+                       "to evaluate how FAIR a resource is/"
+    },
+    {
+        "name": "Tasks",
+        "description": "FAIR Combine tasks. Endpoints allow to retrieve the details of a specific assessment associated with a session, "
                        "to update an assessment status or to retrieve the documentation of FAIR Combine assessments."
     },
     {
@@ -16,6 +21,7 @@ tags_metadata = [
         "description": "FAIR Combine assessment session. Endpoints to create a new session, to load a previously exported session, "
                        "or to display the details of an existing session."
     },
+
 ]
 
 description = """

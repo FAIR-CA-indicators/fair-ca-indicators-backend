@@ -41,7 +41,7 @@ class Task(BaseModel):
             return {TaskStatus.success.value: 1, TaskStatus.failed.value: 0, TaskStatus.warnings.value: 0.5}.get(values['status'])
 
 
-class TaskDescription(BaseModel):
+class Indicator(BaseModel):
     name: str
     group: str
     sub_group: str
