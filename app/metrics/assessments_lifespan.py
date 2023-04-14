@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from csv import DictReader
 
-from app.models import Indicator
+import app.redis_controller as redis_controller
+import app.models as models
 
 fair_indicators = {}
 
@@ -17,7 +18,7 @@ async def get_tasks_definitions(app: FastAPI):
         sub_group = regex.search(line["TaskName"]).groups()[0]
         task_group = sub_group[0]
         return {
-            line["TaskName"]: Indicator(
+            line["TaskName"]: models.Indicator(
                 name=line["TaskName"],
                 group=task_group,
                 sub_group=sub_group,
@@ -33,4 +34,5 @@ async def get_tasks_definitions(app: FastAPI):
         csv_reader = DictReader(file_handler, dialect="unix")
         [fair_indicators.update(parse_line(line)) for line in csv_reader]
 
+    redis_controller.load_dummy_data(redis_controller.redis_app)
     yield

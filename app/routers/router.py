@@ -14,7 +14,7 @@ base_router = APIRouter()
 def create_session(subject: SessionSubjectIn) -> Session:
     if subject.subject_type is not SubjectType.manual:
         raise HTTPException(501, "The api only supports manual assessments at the moment")
-    session_handler = SessionHandler(subject)
+    session_handler = SessionHandler.from_user_input(subject)
 
     redis_app.json().set(f"session:{session_handler.session_model.id}", "$", obj=session_handler.session_model.dict())
 
@@ -26,16 +26,17 @@ def load_session(session: Session) -> Session:
     existing_session_json = redis_app.json().get(f"session:{session.id}")
     if existing_session_json is not None:
         print(f"Impossible to create session from template, a session with if {session.id} already exists")
-        subject = existing_session_json.pop("subject")
-        print(subject)
-        existing_session = Session(**existing_session_json, subject=subject)
-        if existing_session.subject == session.subject:
+        subject = existing_session_json.pop("session_subject")
+        print(subject.path)
+        existing_session = Session(**existing_session_json, session_subject=subject)
+        if existing_session.session_subject.path == session.session_subject.path:
             print("Found session is identical to session sent by user")
             return existing_session
         else:
             raise HTTPException(409, "Existing session found for user-sent id")
 
     else:
+        # TODO: Add checks regarding tasks and session status
         redis_app.json().set(f"session:{session.id}", "$", obj=session.dict())
         return session
 
@@ -44,8 +45,8 @@ def load_session(session: Session) -> Session:
 def session_details(session_id: str) -> Session:
     s_json = redis_app.json().get(f"session:{session_id}")
     if s_json is not None:
-        subject = s_json.pop("subject")
-        s = Session(**s_json, subject=subject)
+        subject = s_json.pop("session_subject")
+        s = Session(**s_json, session_subject=subject)
         return s
     else:
         raise HTTPException(status_code=404, detail="No session with this id was found")
@@ -53,14 +54,13 @@ def session_details(session_id: str) -> Session:
 
 @base_router.get("/session/{session_id}/tasks/{task_id}", tags=["Tasks"])
 def task_detail(session_id: str, task_id: str) -> Task:
-    try:
-        t_json = redis_app.json().get(f"session:{session_id}", f".tasks.{task_id}")
-    except ResponseError:
+    session = session_details(session_id)
+    task = session.get_task(task_id)
+    if task is not None:
+        return task
+    else:
         raise HTTPException(status_code=404,
                             detail="No task with this id was found")
-
-    t = Task(**t_json)
-    return t
 
 
 @base_router.get("/indicators", tags=["Indicators"])
@@ -77,15 +77,22 @@ def indicator_description(name: str) -> Indicator:
 
 
 @base_router.patch("/session/{session_id}/tasks/{task_id}", tags=["Tasks"])
-def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Task:
+def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Session:
+    session = session_details(session_id)
+    print(f"Session found: {session}")
+    handler = SessionHandler.from_existing_session(session)
+
+    task = handler.session_model.get_task(task_id)
+    if task.disabled:
+        raise HTTPException(status_code=403, detail="This task status was automatically set, changing its status is forbidden")
+    task.status = task_status.status
+    handler.update_task_children(task_id)
+
     try:
-        redis_app.json().set(f"session:{session_id}", f".tasks.{task_id}.status", task_status.status)
-        task_json = redis_app.json().get(f"session:{session_id}", f".tasks.{task_id}")
+        redis_app.json().set(f"session:{session_id}", ".", handler.session_model.dict())
     except ResponseError:
         raise HTTPException(status_code=404,
                             detail="No task with this id was found")
 
-    return Task(**task_json)
-    # Need to check that this is not an automated task!
-    # return Task(session_id=session_id, id=task_id, name="Updated Dummy task", status=task_status)
+    return handler.session_model
 

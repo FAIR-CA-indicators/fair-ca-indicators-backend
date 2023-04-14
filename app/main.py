@@ -5,6 +5,7 @@ from app.routers.router import base_router
 from app.metrics.assessments_lifespan import get_tasks_definitions
 from app.dependencies.settings import get_settings
 
+
 tags_metadata = [
     {
         "name": "Indicators",
