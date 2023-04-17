@@ -3,11 +3,11 @@
 ## Local installation
 **TODO: Test local installation**
 
-Requirements: python3.9
+Requirements: python3.9, [redis](https://redis.io/)
 
 1. Install the requirements
 ```bash
-python -m pip install -r requirements
+python -m pip install -r requirements.txt
 ```
 2. In another terminal, run Redis
 ```bash
@@ -28,5 +28,7 @@ Requirements: Docker needs to be installed
 docker-compose up -d
 ```
 
-Endpoints will be accessible at `http://localhost:8000`. Redis can be accessed at `http://localhost:6379`
+Endpoints are accessible at `http://localhost:8000`. 
+
+If you have redis-cli or RedisInsight installed, the redis endpoint can be accessed at `http://localhost:6379` 
 

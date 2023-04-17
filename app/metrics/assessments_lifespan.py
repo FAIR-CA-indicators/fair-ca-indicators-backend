@@ -12,6 +12,13 @@ fair_indicators = {}
 
 @asynccontextmanager
 async def get_tasks_definitions(app: FastAPI):
+    """
+    Method to parse `metrics.csv` and load its content in memory for use by `app`
+    NB: This method is loaded in app lifespan. See [lifespan events](https://fastapi.tiangolo.com/advanced/events/)
+
+    :param app: The FastAPI application that will use the content of `metrics.csv`
+    :return: None
+    """
     regex = re.compile("^CA\-RDA\-([FAIR][1-9](\.[0-9])?)\-")
 
     def parse_line(line):

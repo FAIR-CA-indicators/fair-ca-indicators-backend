@@ -6,8 +6,8 @@ from redis.exceptions import ConnectionError
 
 import app.models as models
 
+
 def create_redis_app():
-    print("Connecting to redis cluster")
     redis_app = Redis(
         host=os.environ.get("REDIS_URL", "localhost"),
         port=os.environ.get("REDIS_PORT", 6379),
@@ -17,13 +17,15 @@ def create_redis_app():
         decode_responses=True,
     )
     try:
-        print(redis_app.ping())
+        # Check that connection is working
+        redis_app.ping()
     except ConnectionError as e:
         raise ConnectionError(f"An error occurred with redis server: {str(e)}")
     # Loading dummy data for tests
     return redis_app
 
 
+# TODO: Remove for demo
 def load_dummy_data(redis_app: "Redis"):
     dummy_session = models.Session(
         id="dummy-1234",
