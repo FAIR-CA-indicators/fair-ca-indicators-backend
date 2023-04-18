@@ -182,6 +182,7 @@ def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Ses
         raise HTTPException(status_code=403, detail="This task status was automatically set, changing its status is forbidden")
     task.status = task_status.status
     handler.update_task_children(task_id)
+    handler.run_statistics()
 
     try:
         redis_app.json().set(f"session:{session_id}", ".", handler.session_model.dict())

@@ -1,7 +1,6 @@
 # FAIR Combine automated evaluation
 
 ## Local installation
-**TODO: Test local installation**
 
 Requirements: python3.9, [redis](https://redis.io/)
 
@@ -18,7 +17,9 @@ redis-stack-server
 uvicorn app.main:app --reload
 ```
 
-The documentation will be available at `http://localhost:8000/docs` (in swagger format) and at `http://localhost:8000/redoc` (in redoc format)
+The documentation is available at `http://localhost:8000/docs` (in SwaggerUI format) and at `http://localhost:8000/redoc` (in ReDoc format)
+
+Main page (`http://localhost:8000`) redirects towards the documentation in ReDoc format.
 
 ## Docker installation
 Requirements: Docker needs to be installed

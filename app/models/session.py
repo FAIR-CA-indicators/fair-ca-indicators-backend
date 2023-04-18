@@ -111,6 +111,7 @@ class Session(BaseModel):
     - *score_applicable_essential*: Identical to *score_all_essential*, excluding non-applicable Tasks
     - *score_applicable_nonessential*: Identical to *score_all_non_essential*, excluding non-applicable Tasks
     - *score_applicable_all*: Identical to *score_all*, excluding non-applicable Tasks
+    - *ratio_not_applicable*: Percentage of assessments that do not apply to the evaluated resource
     """
     id: str
     session_subject: SessionSubjectIn
@@ -122,6 +123,7 @@ class Session(BaseModel):
     score_applicable_essential: Optional[float]
     score_applicable_nonessential: Optional[float]
     score_applicable_all: Optional[float]
+    ratio_not_applicable: Optional[float]
 
     def get_task(self, task_id: str) -> Task:
         if task_id in self.tasks:
@@ -189,6 +191,7 @@ class SessionHandler:
         :return: None. The dict is directly stored in self
         """
         for task in tasks:
+            # FIXME: Will fail when encountering task with multiple parent
             if task.name in self.indicator_tasks:
                 raise ValueError(f"Multiple tasks with the same name ({task.name}) found")
 
@@ -207,7 +210,11 @@ class SessionHandler:
 
     def is_running(self) -> bool:
         """Checks whether the session is still running or not"""
-        return any([task.status is TaskStatus.queued or task.status is TaskStatus.started for task in self.session_model.tasks.values()])
+        return any([
+            task.status is TaskStatus.queued
+            or task.status is TaskStatus.started
+            for task in self.session_model.tasks.values()
+        ])
 
     def run_statistics(self):
         """
@@ -217,31 +224,60 @@ class SessionHandler:
         if self.is_running():
             return
         else:
-            self._calculate_score_essential()
-            self._calculate_score_all()
-            self._calculate_na_ratio()
+            all_tasks = [self.session_model.get_task(task_key) for task_key in self.indicator_tasks.values()]
+            count_all_essential = 0
+            count_all_nonessential = 0
+            count_applicable_essential = 0
+            count_applicable_nonessential = 0
+            count_applicable_all = 0
+            count_na = 0
 
-    def _count_essential(self):
-        # TODO: Correct this
-        return sum([t.priority is TaskPriority.essential and t.status is not TaskStatus.not_applicable for t in self.session_model.tasks.values()])
+            passed_all_essential = 0
+            passed_all_nonessential = 0
+            passed_all = 0
+            passed_applicable_essential = 0
+            passed_applicable_nonessential = 0
+            passed_applicable_all = 0
 
-    def _count_applicable(self):
-        # TODO: Correct this
-        return sum([t.status is not TaskStatus.not_applicable for t in self.session_model.tasks.values()])
+            for task in all_tasks:
+                passed_all += task.score
 
-    def _calculate_na_ratio(self):
-        # TODO: Correct this
-        self.session_model.ratio_not_applicable = sum([t.status is TaskStatus.not_applicable for t in self.session_model.tasks.values()]) / len(self.session_model.tasks)
+                if task.priority is not TaskPriority.essential:
+                    count_all_nonessential += 1
+                    passed_all_nonessential += task.score
 
-    def _calculate_score_essential(self):
-        # TODO: Correct this
-        self.session_model.score_essential = sum([
-            t.score for t in self.session_model.tasks.values() if t.priority is TaskPriority.essential and t.status is not TaskStatus.not_applicable
-        ]) / self._count_essential()
+                    if task.status is not TaskStatus.not_applicable:
+                        count_applicable_nonessential += 1
+                        passed_applicable_nonessential += task.score
+                        count_applicable_all += 1
+                        passed_applicable_all += task.score
 
-    def _calculate_score_all(self):
-        # TODO: Correct this
-        self.session_model.score_all = sum([t.score for t in self.session_model.tasks.values() if t.status is not TaskStatus.not_applicable]) / self._count_applicable()
+                    else:
+                        count_na += 1
+
+                else:
+                    count_all_essential += 1
+                    passed_all_essential += task.score
+
+                    if task.status is not TaskStatus.not_applicable:
+                        count_applicable_essential += 1
+                        passed_applicable_essential += task.score
+                        count_applicable_all += 1
+                        passed_applicable_all += task.score
+
+                    else:
+                        count_na += 1
+
+            self.session_model.score_all = passed_all / len(all_tasks)
+
+            self.session_model.score_applicable_all = passed_applicable_all / count_applicable_all
+            self.session_model.score_applicable_essential = passed_applicable_essential / count_applicable_essential
+            self.session_model.score_applicable_nonessential = passed_applicable_nonessential / count_applicable_nonessential
+
+            self.session_model.score_all_essential = passed_all_essential / count_all_essential
+            self.session_model.score_all_nonessential = passed_all_nonessential / count_all_nonessential
+
+            self.session_model.ratio_not_applicable = count_na / len(all_tasks)
 
     def get_task_from_indicator(self, indicator: str):
         """Returns the Task in Session associated with an indicator"""
@@ -345,14 +381,11 @@ class SessionHandler:
                     parent_key = self.get_task_from_indicator(parent_indicator)
                     parent_task = self.session_model.get_task(parent_key)
                     parent_task.children[task_id] = task
-                    # task.parents[parent_key] = parent_task
 
                 else:
                     parent_task = self._create_task(parent_indicator)
                     self.indicator_tasks[parent_indicator] = parent_task.id
                     parent_task.children[task_id] = task
-
-                    # task.parents[key] = parent_task
 
         else:
             self.session_model.tasks[task_id] = task
