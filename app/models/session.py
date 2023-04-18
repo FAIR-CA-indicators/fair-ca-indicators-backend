@@ -216,68 +216,68 @@ class SessionHandler:
             for task in self.session_model.tasks.values()
         ])
 
-    def run_statistics(self):
+    def update_session_data(self):
         """
         Calculate the different statistics of the session (scores, non_applicable tasks ratio, ...)
         :return: None.
         """
-        if self.is_running():
-            return
-        else:
-            all_tasks = [self.session_model.get_task(task_key) for task_key in self.indicator_tasks.values()]
-            count_all_essential = 0
-            count_all_nonessential = 0
-            count_applicable_essential = 0
-            count_applicable_nonessential = 0
-            count_applicable_all = 0
-            count_na = 0
+        if not self.is_running():
+            self.session_model.status = SessionStatus.finished
 
-            passed_all_essential = 0
-            passed_all_nonessential = 0
-            passed_all = 0
-            passed_applicable_essential = 0
-            passed_applicable_nonessential = 0
-            passed_applicable_all = 0
+        all_tasks = [self.session_model.get_task(task_key) for task_key in self.indicator_tasks.values()]
+        count_all_essential = 0
+        count_all_nonessential = 0
+        count_applicable_essential = 0
+        count_applicable_nonessential = 0
+        count_applicable_all = 0
+        count_na = 0
 
-            for task in all_tasks:
-                passed_all += task.score
+        passed_all_essential = 0
+        passed_all_nonessential = 0
+        passed_all = 0
+        passed_applicable_essential = 0
+        passed_applicable_nonessential = 0
+        passed_applicable_all = 0
 
-                if task.priority is not TaskPriority.essential:
-                    count_all_nonessential += 1
-                    passed_all_nonessential += task.score
+        for task in all_tasks:
+            passed_all += task.score
 
-                    if task.status is not TaskStatus.not_applicable:
-                        count_applicable_nonessential += 1
-                        passed_applicable_nonessential += task.score
-                        count_applicable_all += 1
-                        passed_applicable_all += task.score
+            if task.priority is not TaskPriority.essential:
+                count_all_nonessential += 1
+                passed_all_nonessential += task.score
 
-                    else:
-                        count_na += 1
+                if task.status is not TaskStatus.not_applicable:
+                    count_applicable_nonessential += 1
+                    passed_applicable_nonessential += task.score
+                    count_applicable_all += 1
+                    passed_applicable_all += task.score
 
                 else:
-                    count_all_essential += 1
-                    passed_all_essential += task.score
+                    count_na += 1
 
-                    if task.status is not TaskStatus.not_applicable:
-                        count_applicable_essential += 1
-                        passed_applicable_essential += task.score
-                        count_applicable_all += 1
-                        passed_applicable_all += task.score
+            else:
+                count_all_essential += 1
+                passed_all_essential += task.score
 
-                    else:
-                        count_na += 1
+                if task.status is not TaskStatus.not_applicable:
+                    count_applicable_essential += 1
+                    passed_applicable_essential += task.score
+                    count_applicable_all += 1
+                    passed_applicable_all += task.score
 
-            self.session_model.score_all = passed_all / len(all_tasks)
+                else:
+                    count_na += 1
 
-            self.session_model.score_applicable_all = passed_applicable_all / count_applicable_all
-            self.session_model.score_applicable_essential = passed_applicable_essential / count_applicable_essential
-            self.session_model.score_applicable_nonessential = passed_applicable_nonessential / count_applicable_nonessential
+        self.session_model.score_all = passed_all / len(all_tasks)
 
-            self.session_model.score_all_essential = passed_all_essential / count_all_essential
-            self.session_model.score_all_nonessential = passed_all_nonessential / count_all_nonessential
+        self.session_model.score_applicable_all = passed_applicable_all / count_applicable_all
+        self.session_model.score_applicable_essential = passed_applicable_essential / count_applicable_essential
+        self.session_model.score_applicable_nonessential = passed_applicable_nonessential / count_applicable_nonessential
 
-            self.session_model.ratio_not_applicable = count_na / len(all_tasks)
+        self.session_model.score_all_essential = passed_all_essential / count_all_essential
+        self.session_model.score_all_nonessential = passed_all_nonessential / count_all_nonessential
+
+        self.session_model.ratio_not_applicable = count_na / len(all_tasks)
 
     def get_task_from_indicator(self, indicator: str):
         """Returns the Task in Session associated with an indicator"""
