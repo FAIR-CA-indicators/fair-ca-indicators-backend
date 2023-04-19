@@ -1,1 +1,1 @@
-from .redis_handler import redis_app, load_dummy_data
+from .redis_handler import redis_app
