@@ -66,7 +66,7 @@ class Task(BaseModel):
     comment: str = ""
     disabled: bool = False
 
-    score: Optional[float]
+    score: float = 0
 
     @validator("score", pre=True, always=True)
     def make_score(cls, _, values: dict) -> float:
@@ -80,7 +80,11 @@ class Task(BaseModel):
         """
         # Necessary to check for status as fields failing validation are not included in values
         if "status" in values:
-            return {TaskStatus.success.value: 1, TaskStatus.failed.value: 0, TaskStatus.warnings.value: 0.5}.get(values['status'])
+            return {
+                TaskStatus.success.value: 1,
+                TaskStatus.failed.value: 0,
+                TaskStatus.warnings.value: 0.5,
+            }.get(values['status'], 0)
         else:
             raise ValueError("Task status is required to calculate a score")
 
