@@ -1,9 +1,12 @@
 from pydantic import BaseModel, validator, root_validator
 from enum import Enum
-from typing import Optional, Dict
+from typing import Optional, Dict, TYPE_CHECKING
 
 from app.metrics.assessments_lifespan import fair_indicators
+from app.celery.celery_app import execute_task
 
+if TYPE_CHECKING:
+    from .session import SessionSubjectIn
 
 class TaskStatus(str, Enum):
     """
@@ -255,3 +258,37 @@ class IndicatorDependency:
             return any([d.is_running_or_failed() for d in dependencies])
         elif self.operation is DependencyType.and_:
             return all([d.is_running_or_failed() for d in dependencies])
+
+
+class AutomatedTask(Task):
+    metric_path = "fair-test-example"
+    metric_version = "0.1.0"
+    title = "Example of FairTest implementation"
+    # description = """This indicator serves no purpose except being used as a template for other FairCombine tests"""
+    topics = ["data"]  # Needs to be standardised!
+    authors = "author-orcid"
+    test_test = {}  # Contains the urls towards records used for testing the metric
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+    def execute_metric(self, data: dict):
+        self.status = TaskStatus.started
+        result = execute_task.apply_async(task=self, data=data)
+        self.status = result
+        return result
+
+    def evaluate(self, data: dict):
+        eval.info(
+            f"Running FairCombine example. This test will pass",
+        )
+
+        # Retrieving subject of the evaluation (a model or an archive)
+        # data = eval.retrieve_metadata(eval.subject)
+
+        # Running some kind of tests on the data (does it contain an id, a license, ...)
+        # result = self.execute_metric(data)
+
+        return TaskStatus.success
+

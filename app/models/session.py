@@ -7,13 +7,14 @@ from .tasks import (
     Task,
     TaskStatus,
     TaskPriority,
+    AutomatedTask,
     Indicator,
     IndicatorDependency,
     DependencyType,
 )
 from app.metrics.assessments_lifespan import fair_indicators
 from app.dependencies.settings import get_settings
-
+from . import automated_tasks
 
 class SessionStatus(str, Enum):
     """
@@ -173,6 +174,7 @@ class SessionHandler:
         self.indicator_tasks = {}
 
         if not session.tasks:
+            self.data = self.retrieve_metadata(self.user_input.path)
             self.create_tasks()
 
         else:
@@ -220,13 +222,14 @@ class SessionHandler:
             if task.children:
                 self._build_tasks_dict(list(task.children.values()))
 
-    def retrieve_metadata(self, url: str) -> None:
+    def retrieve_metadata(self, url: str) -> dict:
         """
         TODO: Method to retrieve the archive and models for url and file type assessments
         :param url:
         :return:
         """
         # See what is possible here
+        return {"id": "dummy-persistent-identifier"}
         pass
 
     # FIXME: Does not work. Does not take children into account
@@ -424,12 +427,20 @@ class SessionHandler:
         task_id = str(uuid4())
         config = get_settings()
 
-        task = Task(
+        task = getattr(automated_tasks, config.automated_assessments[indicator.name])(
             id=task_id,
             name=indicator.name,
             priority=TaskPriority(indicator.priority),
             session_id=self.id,
-        )
+        ) \
+            if indicator.name in config.automated_assessments  \
+            else Task(
+                id=task_id,
+                name=indicator.name,
+                priority=TaskPriority(indicator.priority),
+                session_id=self.id,
+            )
+
 
         task_dependencies = config.assessment_dependencies.get(indicator.name)
         if task_dependencies is not None:
@@ -453,6 +464,12 @@ class SessionHandler:
         if default_status != TaskStatus.queued:
             task.automated = True
         task.disabled = default_disabled
+
+        if isinstance(task, AutomatedTask) and not task.disabled:
+            task.disabled = True
+            task_result = task.execute_metric(self.data)
+            print(f"Automated task {indicator.name} result: {task_result}")
+
         return task
 
     def update_task_children(self, task_key):
