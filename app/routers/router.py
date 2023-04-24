@@ -53,12 +53,9 @@ def load_session(session: Session) -> Session:
     """
     existing_session_json = redis_app.json().get(f"session:{session.id}")
     if existing_session_json is not None:
-        print(f"Impossible to create session from template, a session with if {session.id} already exists")
         subject = existing_session_json.pop("session_subject")
-        print(subject.path)
         existing_session = Session(**existing_session_json, session_subject=subject)
-        if existing_session.session_subject.path == session.session_subject.path:
-            print("Found session is identical to session sent by user")
+        if existing_session.session_subject == session.session_subject:
             return existing_session
         else:
             raise HTTPException(409, "Existing session found for user-sent id")
