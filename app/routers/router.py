@@ -30,12 +30,16 @@ def create_session(subject: SessionSubjectIn) -> Session:
             501, "The api only supports manual assessments at the moment"
         )
     session_handler = SessionHandler.from_user_input(subject)
-
-    redis_app.json().set(
-        f"session:{session_handler.session_model.id}",
-        "$",
-        obj=session_handler.session_model.dict(),
-    )
+    try:
+        redis_app.json().set(
+            f"session:{session_handler.session_model.id}",
+            "$",
+            obj=session_handler.session_model.dict(),
+        )
+    except TypeError as e:
+        print(session_handler.session_model)
+        print(session_handler.session_model.dict())
+        raise e
 
     return session_handler.session_model
 

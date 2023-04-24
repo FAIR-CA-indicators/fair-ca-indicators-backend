@@ -1,12 +1,12 @@
 from pydantic import BaseModel, validator, root_validator
 from enum import Enum
-from typing import Optional, Dict, TYPE_CHECKING
+from typing import Optional, Dict
+from fastapi import HTTPException
 
 from app.metrics.assessments_lifespan import fair_indicators
-from app.celery.celery_app import execute_task
 
-if TYPE_CHECKING:
-    from .session import SessionSubjectIn
+from app.celery import automated_tasks
+
 
 class TaskStatus(str, Enum):
     """
@@ -111,7 +111,7 @@ class Task(BaseModel):
         :return: The valid assessment name
         """
         if name not in fair_indicators:
-            raise ValueError("Given assessment name is not a known indicator")
+            raise ValueError(f"Given assessment name {name} is not a known indicator")
         return name
 
     def get_task_child(self, child_id: str) -> Optional["Task"]:
@@ -268,27 +268,22 @@ class AutomatedTask(Task):
     topics = ["data"]  # Needs to be standardised!
     authors = "author-orcid"
     test_test = {}  # Contains the urls towards records used for testing the metric
+    task_method: str
+    automated: bool = True
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def do_evaluate(self, data: dict):
+        if data is None or not data:
+            raise HTTPException(status_code=422, detail="Provide data to evaluate")
 
-
-    def execute_metric(self, data: dict):
-        self.status = TaskStatus.started
-        result = execute_task.apply_async(task=self, data=data)
-        self.status = result
-        return result
+        self.evaluate(data)
+        return self.status
 
     def evaluate(self, data: dict):
-        eval.info(
-            f"Running FairCombine example. This test will pass",
-        )
+        self.status = TaskStatus.started
+        celery_task = getattr(automated_tasks.tasks, self.task_method)
+        if celery_task is None:
+            raise ValueError(f"Task method {self.task_method} was not found")
 
-        # Retrieving subject of the evaluation (a model or an archive)
-        # data = eval.retrieve_metadata(eval.subject)
+        celery_task.delay(self.dict(), data)
 
-        # Running some kind of tests on the data (does it contain an id, a license, ...)
-        # result = self.execute_metric(data)
-
-        return TaskStatus.success
 

@@ -1,5 +1,5 @@
 from uuid import uuid4
-from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator
+from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator, ValidationError
 from typing import Union, Optional
 from enum import Enum
 
@@ -14,7 +14,7 @@ from .tasks import (
 )
 from app.metrics.assessments_lifespan import fair_indicators
 from app.dependencies.settings import get_settings
-from . import automated_tasks
+from app.redis_controller import redis_app
 
 class SessionStatus(str, Enum):
     """
@@ -201,6 +201,31 @@ class SessionHandler:
         :param session: A pre-existing session
         :return: A SessionHandler object
         """
+        return cls(session)
+
+    @classmethod
+    def from_id(cls, session_id: str) -> "SessionHandler":
+        """
+        Creates a session handler for an existing session using that session identifier.
+
+        :param session_id: A pre-existing session identifier
+        :return: A SessionHandler object
+        """
+        def build_task(task_dict):
+            children = task_dict.pop("children")
+            if children:
+                children = {child_key: build_task(child_dict) for child_key, child_dict in children}
+            try:
+                task = Task(**task_dict, children=children)
+                return task
+            except ValidationError as e:
+                raise ValueError(f"Failed to build task with name {task_dict['name']}: {str(e)}")
+
+        session_json = redis_app.json().get(f"session:{session_id}")
+        tasks = {task_key: build_task(task_dict) for task_key, task_dict in session_json.pop("tasks").items()}
+
+        subject = session_json.pop("session_subject")
+        session = Session(**session_json, session_subject=subject, tasks=tasks)
         return cls(session)
 
     def _build_tasks_dict(self, tasks: list[Task]):
@@ -427,11 +452,12 @@ class SessionHandler:
         task_id = str(uuid4())
         config = get_settings()
 
-        task = getattr(automated_tasks, config.automated_assessments[indicator.name])(
+        task = AutomatedTask(
             id=task_id,
             name=indicator.name,
             priority=TaskPriority(indicator.priority),
             session_id=self.id,
+            task_method=config.automated_assessments[indicator.name]
         ) \
             if indicator.name in config.automated_assessments  \
             else Task(
@@ -466,9 +492,7 @@ class SessionHandler:
         task.disabled = default_disabled
 
         if isinstance(task, AutomatedTask) and not task.disabled:
-            task.disabled = True
-            task_result = task.execute_metric(self.data)
-            print(f"Automated task {indicator.name} result: {task_result}")
+            task.do_evaluate(self.data)
 
         return task
 

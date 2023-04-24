@@ -99,7 +99,7 @@ class Config(BaseSettings):
     }
 
     automated_assessments: dict[str, str] = {
-        "CA-RDA-F1-01Model": "F1ModelPersistentIdentifier",
+        "CA-RDA-F1-01Model": "f1_model_persistent_identifier",
     }
 
 
