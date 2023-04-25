@@ -65,6 +65,7 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.queued
     comment: str = ""
     disabled: bool = False
+    automated: bool = False
 
     score: float = 0
 
