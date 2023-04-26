@@ -1,4 +1,4 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, root_validator
 from enum import Enum
 from typing import Optional, Dict
 
@@ -68,9 +68,12 @@ class Task(BaseModel):
     automated: bool = False
 
     score: float = 0
+    
+    class Config:
+        validate_assignment = True
 
-    @validator("score", pre=True, always=True)
-    def make_score(cls, _, values: dict) -> float:
+    @root_validator
+    def make_score(cls, values: dict) -> float:
         """
         Calculate the score based on the Task status. This erases possible user
         input in case someone would cheat.
@@ -81,11 +84,12 @@ class Task(BaseModel):
         """
         # Necessary to check for status as fields failing validation are not included in values
         if "status" in values:
-            return {
+            values["score"] = {
                 TaskStatus.success.value: 1,
                 TaskStatus.failed.value: 0,
                 TaskStatus.warnings.value: 0.5,
             }.get(values['status'], 0)
+            return values
         else:
             raise ValueError("Task status is required to calculate a score")
 
