@@ -33,3 +33,14 @@ Endpoints are accessible at `http://localhost:8000`.
 
 If you have redis-cli or RedisInsight installed, the redis endpoint can be accessed at `http://localhost:6379` 
 
+# Testing
+
+First install test requirements.
+```shell
+pip install -r test-requirements.txt
+```
+
+Then, you can simply run all tests using pytest.
+```shell
+pytest
+```

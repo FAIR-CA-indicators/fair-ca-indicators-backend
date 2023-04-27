@@ -2,3 +2,4 @@
 /redis_data/.testfile
 /redis_data/dump.rdb
 /app/test_main.http
+/.coverage
