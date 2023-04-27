@@ -117,13 +117,13 @@ class Session(BaseModel):
     session_subject: SessionSubjectIn
     tasks: dict[str, Task] = {}
     status: SessionStatus = SessionStatus.queued
-    score_all_essential: Optional[float]
-    score_all_nonessential: Optional[float]
-    score_all: Optional[float]
-    score_applicable_essential: Optional[float]
-    score_applicable_nonessential: Optional[float]
-    score_applicable_all: Optional[float]
-    ratio_not_applicable: Optional[float]
+    score_all_essential: float = 0
+    score_all_nonessential: float = 0
+    score_all: float = 0
+    score_applicable_essential: float = 0
+    score_applicable_nonessential: float = 0
+    score_applicable_all: float = 0
+    ratio_not_applicable: float = 0
 
     def get_task(self, task_id: str) -> Task:
         if task_id in self.tasks:
