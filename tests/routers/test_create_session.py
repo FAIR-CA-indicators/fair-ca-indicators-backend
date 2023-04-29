@@ -1,5 +1,6 @@
 from app.models import Session
 
+
 def test_create_session_manual_session(test_client, redis_client):
     input_form = {
         "subject_type": "manual",
@@ -11,12 +12,12 @@ def test_create_session_manual_session(test_client, redis_client):
         "is_model_metadata_standard": False,
         "is_archive_metadata_standard": False,
         "is_biomodel": False,
-        "is_pmr": False
+        "is_pmr": False,
     }
 
     res = test_client.post("/session", json=input_form)
     assert res.status_code == 200
-    session_data  = res.json()
+    session_data = res.json()
     # FIXME: Is there a way to get redis running in test env?
     # stored_data = redis_app.json().get(session_data["id"])
     # assert stored_data is not None

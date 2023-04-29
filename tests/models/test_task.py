@@ -1,19 +1,21 @@
 import pytest
 
-from app.models import Task, TaskStatus, IndicatorDependency
+from app.models import TaskStatus
 
 
 # Will change if we make score dependent on TaskPriority
-@pytest.mark.parametrize("status", [
-    TaskStatus.queued,
-    TaskStatus.started,
-    TaskStatus.not_answered,
-    TaskStatus.not_applicable,
-    TaskStatus.failed,
-    TaskStatus.success,
-    TaskStatus.warnings,
-
-])
+@pytest.mark.parametrize(
+    "status",
+    [
+        TaskStatus.queued,
+        TaskStatus.started,
+        TaskStatus.not_answered,
+        TaskStatus.not_applicable,
+        TaskStatus.failed,
+        TaskStatus.success,
+        TaskStatus.warnings,
+    ],
+)
 def test_task_validation_make_score(status):
     pass
 
@@ -37,4 +39,3 @@ def test_indicator_dependency_automatic_fail():
 
 def test_indicator_dependency_automatic_disable():
     pass
-

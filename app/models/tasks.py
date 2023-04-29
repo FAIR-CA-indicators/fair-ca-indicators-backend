@@ -18,6 +18,7 @@ class TaskStatus(str, Enum):
     - *not_applicable*: The assessment is not applicable to the model/archive
     - *not_answered*: In self-assessments, the user refused to answer the question
     """
+
     queued = "queued"
     started = "started"
     success = "success"  # Children tasks should be answerable
@@ -39,6 +40,7 @@ class TaskStatusIn(BaseModel):
     Pydantic model for user to submit a status when editing a Task (see route
     `update_task`)
     """
+
     status: TaskStatus
 
 
@@ -57,6 +59,7 @@ class Task(BaseModel):
     - *disabled*: True if the Task status cannot be edited by user. False otherwise
     - *score*: 1 if Task status is **success**, 0 if **failed**, 0.5 if **warnings**, null otherwise.
     """
+
     id: str
     name: str
     session_id: str  # Needs a validator (https://docs.pydantic.dev/usage/validators/)? This must be a valid id
@@ -68,7 +71,7 @@ class Task(BaseModel):
     automated: bool = False
 
     score: float = 0
-    
+
     class Config:
         validate_assignment = True
 
@@ -91,7 +94,7 @@ class Task(BaseModel):
                 TaskStatus.success.value: 1,
                 TaskStatus.failed.value: 0,
                 TaskStatus.warnings.value: 0.5,
-            }.get(values['status'], 0)
+            }.get(values["status"], 0)
             return values
         else:
             raise ValueError("Task status is required to calculate a score")
@@ -151,6 +154,7 @@ class Indicator(BaseModel):
     - *short*: A short description of the assessment
     - *description*: A in-depth description of the assessment
     """
+
     name: str
     group: str
     sub_group: str
@@ -178,6 +182,7 @@ class IndicatorDependency:
             disabled and its status is automatically set at `failed` if both
             `indicator2` AND `indicator3` are failed (DepedencyType.or_)
     """
+
     def __init__(self, dependencies: list[str], operation: DependencyType = "or"):
         if len(dependencies) != len(set(dependencies)):
             raise ValueError("List of dependencies contains duplicates")
@@ -195,19 +200,25 @@ class IndicatorDependency:
         """
         indicators = [d.name for d in dependencies]
         if len(indicators) != len(set(indicators)):
-            raise ValueError("Tasks given in dependencies contains duplicate assessments")
+            raise ValueError(
+                "Tasks given in dependencies contains duplicate assessments"
+            )
 
         if len(indicators) != len(self.dependencies):
-            raise ValueError(f"Length of dependencies in parameters ({len(indicators)} is different than length of indicators given at initialization ({len(self.dependencies)}")
+            raise ValueError(
+                f"Length of dependencies in parameters ({len(indicators)} is different than length of indicators given "
+                f"at initialization ({len(self.dependencies)}"
+            )
 
         indicators = set(indicators)
         if any([d not in indicators for d in self.dependencies]):
-            raise ValueError(f"Some dependencies defined at initialisation are missing")
+            raise ValueError("Some dependencies defined at initialisation are missing")
 
     def is_automatically_failed(self, dependencies: list["Task"]) -> bool:
         """
         Checks if the Task should be automatically failed based on it dependencies
-        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised with)
+        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised
+            with)
         Step2: Applies the dependencies combination to determine whether task should be automatically failed
         If dependency is `or`, Task is automatically failed if any dependency is failed.
         If dependency is `and`, Task is automatically failed if all dependencies are failed.
@@ -227,7 +238,8 @@ class IndicatorDependency:
     def is_automatically_disabled(self, dependencies: list["Task"]) -> bool:
         """
         Checks if a Task should be automatically disabled based on it dependencies
-        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised with)
+        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised
+            with)
         Step2: Applies the dependencies combination to determine whether task should be automatically disabled
         If dependency type is `or`, Task is disabled if any dependency has not passed yet
         If dependency type is `and`, Task is disabled if no dependency has passed
@@ -242,4 +254,3 @@ class IndicatorDependency:
             return any([d.is_running_or_failed() for d in dependencies])
         elif self.operation is DependencyType.and_:
             return all([d.is_running_or_failed() for d in dependencies])
-

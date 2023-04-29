@@ -10,7 +10,7 @@ from app.redis_controller import redis_app
 base_router = APIRouter()
 
 
-@base_router.post('/session', tags=["Sessions"])
+@base_router.post("/session", tags=["Sessions"])
 def create_session(subject: SessionSubjectIn) -> Session:
     """
     Create a new session based on user input
@@ -26,10 +26,16 @@ def create_session(subject: SessionSubjectIn) -> Session:
     :return: The created session
     """
     if subject.subject_type is not SubjectType.manual:
-        raise HTTPException(501, "The api only supports manual assessments at the moment")
+        raise HTTPException(
+            501, "The api only supports manual assessments at the moment"
+        )
     session_handler = SessionHandler.from_user_input(subject)
 
-    redis_app.json().set(f"session:{session_handler.session_model.id}", "$", obj=session_handler.session_model.dict())
+    redis_app.json().set(
+        f"session:{session_handler.session_model.id}",
+        "$",
+        obj=session_handler.session_model.dict(),
+    )
 
     return session_handler.session_model
 
@@ -112,8 +118,7 @@ def task_detail(session_id: str, task_id: str) -> Task:
     if task is not None:
         return task
     else:
-        raise HTTPException(status_code=404,
-                            detail="No task with this id was found")
+        raise HTTPException(status_code=404, detail="No task with this id was found")
 
 
 @base_router.get("/indicators", tags=["Indicators"])
@@ -176,7 +181,10 @@ def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Ses
 
     task = handler.session_model.get_task(task_id)
     if task.disabled:
-        raise HTTPException(status_code=403, detail="This task status was automatically set, changing its status is forbidden")
+        raise HTTPException(
+            status_code=403,
+            detail="This task status was automatically set, changing its status is forbidden",
+        )
     task.status = task_status.status
     handler.update_task_children(task_id)
     handler.update_session_data()
@@ -184,8 +192,6 @@ def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Ses
     try:
         redis_app.json().set(f"session:{session_id}", ".", handler.session_model.dict())
     except ResponseError:
-        raise HTTPException(status_code=404,
-                            detail="No task with this id was found")
+        raise HTTPException(status_code=404, detail="No task with this id was found")
 
     return handler.session_model
-

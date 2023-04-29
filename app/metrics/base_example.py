@@ -1,5 +1,6 @@
 from fair_test import FairTest, FairTestEvaluation
 
+
 class MetricTest(FairTest):
     metric_path = "fair-test-example"
     metric_version = "0.1.0"
@@ -14,7 +15,7 @@ class MetricTest(FairTest):
 
     def evaluate(self, eval: FairTestEvaluation):
         eval.info(
-            f"Running FairCombine example. This test will pass",
+            "Running FairCombine example. This test will pass",
         )
 
         # Retrieving subject of the evaluation (a model or an archive)

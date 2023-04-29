@@ -19,4 +19,3 @@ async def test_fair_indicators(test_asyncclient):
 
         for line in csv_reader:
             assert line["TaskName"] in fair_indicators
-

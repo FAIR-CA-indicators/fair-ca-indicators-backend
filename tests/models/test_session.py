@@ -74,6 +74,7 @@ def test_session_handler_from_session():
 
     assert session.tasks == {task_id: task}
 
+
 def test_session_handler_build_task_dict():
     session = SessionFactory()
     session_id = session.id
@@ -97,7 +98,11 @@ def test_session_handler_build_task_dict():
 
     sh = SessionHandler.from_existing_session(session)
 
-    assert sh.indicator_tasks == {task1_name: task1_id, task2_name: task2_id, task3_name: task3_id}
+    assert sh.indicator_tasks == {
+        task1_name: task1_id,
+        task2_name: task2_id,
+        task3_name: task3_id,
+    }
 
 
 def test_session_handler_is_running():
@@ -137,26 +142,28 @@ def test_session_handler_update_session_data_essential_task():
     task1.status = TaskStatus.success
     sh.update_task_children(task1.id)
     sh.update_session_data()
-    assert session.score_all == 1.0/3.0
-    assert session.score_all_essential == 1.0/3.0
-    assert session.score_applicable_essential == 1.0/3.0
+    assert session.score_all == 1.0 / 3.0
+    assert session.score_all_essential == 1.0 / 3.0
+    assert session.score_applicable_essential == 1.0 / 3.0
     assert session.score_all_nonessential == 0
     assert session.score_applicable_nonessential == 0
     assert session.ratio_not_applicable == 0
 
     task3.status = TaskStatus.not_applicable
     sh.update_session_data()
-    assert session.score_all == 1.0/3.0
-    assert session.score_all_essential == 1.0/3.0
+    assert session.score_all == 1.0 / 3.0
+    assert session.score_all_essential == 1.0 / 3.0
     assert session.score_applicable_essential == 0.5
     assert session.score_all_nonessential == 0
     assert session.score_applicable_nonessential == 0
-    assert session.ratio_not_applicable == 1.0/3.0
+    assert session.ratio_not_applicable == 1.0 / 3.0
 
 
 def test_session_handler_update_session_data_nonessential_task():
     session = SessionFactory()
-    task1 = TaskFactory(session_id=session.id, priority=TaskPriority.important, name="CA-RDA-F1-01Model")
+    task1 = TaskFactory(
+        session_id=session.id, priority=TaskPriority.important, name="CA-RDA-F1-01Model"
+    )
     task2 = TaskFactory(session_id=session.id, name="CA-RDA-F1-02Model")
     task3 = TaskFactory(session_id=session.id, name="CA-RDA-I1-01Model")
     task1.add_task(task3)
@@ -173,7 +180,7 @@ def test_session_handler_update_session_data_nonessential_task():
     task1.status = TaskStatus.success
     sh.update_task_children(task1.id)
     sh.update_session_data()
-    assert session.score_all == 1.0/3.0
+    assert session.score_all == 1.0 / 3.0
     assert session.score_all_essential == 0
     assert session.score_applicable_essential == 0
     assert session.score_all_nonessential == 1
@@ -182,12 +189,12 @@ def test_session_handler_update_session_data_nonessential_task():
 
     task3.status = TaskStatus.not_applicable
     sh.update_session_data()
-    assert session.score_all == 1.0/3.0
+    assert session.score_all == 1.0 / 3.0
     assert session.score_all_essential == 0
     assert session.score_applicable_essential == 0
     assert session.score_all_nonessential == 1
     assert session.score_applicable_nonessential == 1
-    assert session.ratio_not_applicable == 1.0/3.0
+    assert session.ratio_not_applicable == 1.0 / 3.0
 
 
 def test_session_handler_default_task_status():

@@ -7,6 +7,7 @@ from tests.factories import (
     ManualSessionSubjectFactory,
 )
 
+
 @pytest.fixture
 def file_session_input():
     with tempfile.NamedTemporaryFile(mode="r") as tmp:

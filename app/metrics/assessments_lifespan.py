@@ -18,7 +18,7 @@ async def get_tasks_definitions(app: FastAPI):
     :param app: The FastAPI application that will use the content of `metrics.csv`
     :return: None
     """
-    regex = re.compile("^CA\-RDA\-([FAIR][1-9](\.[0-9])?)\-")
+    regex = re.compile(r"^CA-RDA-([FAIR][1-9](\.[0-9])?)-")
 
     def parse_line(line):
         sub_group = regex.search(line["TaskName"]).groups()[0]
@@ -31,7 +31,7 @@ async def get_tasks_definitions(app: FastAPI):
                 priority=line["TaskPriority"].lower(),
                 question=line["TaskQuestion"],
                 short=line["TaskShortDescription"],
-                description=line["TaskDetails"]
+                description=line["TaskDetails"],
             )
         }
 
