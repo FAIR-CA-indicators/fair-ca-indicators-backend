@@ -6,7 +6,12 @@ from app.models import (
     TaskPriority,
 )
 
-from tests.factories import ManualSessionSubjectFactory, TaskFactory, SessionFactory, IndicatorFactory
+from tests.factories import (
+    ManualSessionSubjectFactory,
+    TaskFactory,
+    SessionFactory,
+    IndicatorFactory,
+)
 
 
 def test_session_get_task():

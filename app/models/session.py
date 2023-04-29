@@ -219,10 +219,11 @@ class SessionHandler:
     #   We need to automatically update a session status once a task status is updated
     def is_running(self) -> bool:
         """Checks whether the session is still running or not"""
+        all_tasks = [self.session_model.get_task(task_id) for task_id in self.indicator_tasks.values()]
         return any([
             task.status is TaskStatus.queued
             or task.status is TaskStatus.started
-            for task in self.session_model.tasks.values()
+            for task in all_tasks
         ])
 
     def update_session_data(self):
