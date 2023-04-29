@@ -136,7 +136,7 @@ class Task(BaseModel):
         """
         return (
             self.status != "success"
-            and self.status != "warning"
+            and self.status != "warnings"
             and self.status != "not_applicable"
             and self.status != "not_answered"
         )
