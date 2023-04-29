@@ -5,6 +5,8 @@ from typing import List
 
 class Config(BaseSettings):
     app_name: str = "FAIR Combine API"
+    redis_db_number: int = 0
+
     allowed_origins: List[str] = []
     # List of indicators that applied to archive (if no archive, their statuses will be set to 'failed')
     archive_indicators: List[str] = [
@@ -101,8 +103,11 @@ class ProdConfig(Config):
     pass
 
 
+class TestConfig(Config):
+    redis_db_number = 15
+
 @lru_cache()
 def get_settings():
     env = os.environ.get("FAIR_COMBINE_ENV", "dev")
-    config = {"dev": DevConfig, "prod": ProdConfig}.get(env)()
+    config = {"dev": DevConfig, "prod": ProdConfig, "test": TestConfig}.get(env)()
     return config

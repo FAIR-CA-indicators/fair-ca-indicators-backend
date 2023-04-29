@@ -115,7 +115,7 @@ class Session(BaseModel):
     """
     id: str
     session_subject: SessionSubjectIn
-    tasks: dict[str, Task] = {}
+    tasks: dict[str, Task] = {}  # NEVER SET DIRECTLY, USE self.add_task()
     status: SessionStatus = SessionStatus.queued
     score_all_essential: float = 0
     score_all_nonessential: float = 0
@@ -133,6 +133,13 @@ class Session(BaseModel):
             tmp = task.get_task_child(task_id)
             if tmp is not None:
                 return tmp
+
+    def add_task(self, task: Task, parent_id: Optional[str] = None):
+        if parent_id is not None:
+            parent = self.get_task(parent_id)
+            parent.add_task(task)
+        else:
+            self.tasks.update({task.id: task})
 
 # TODO: Document methods
 class SessionHandler:
@@ -157,7 +164,7 @@ class SessionHandler:
             self.create_tasks()
 
         else:
-            self.build_tasks_dict(list(self.session_model.tasks.values()))
+            self._build_tasks_dict(list(self.session_model.tasks.values()))
 
     @classmethod
     def from_user_input(cls, session_data: SessionSubjectIn) -> "SessionHandler":
@@ -182,7 +189,7 @@ class SessionHandler:
         """
         return cls(session)
 
-    def build_tasks_dict(self, tasks: list[Task]):
+    def _build_tasks_dict(self, tasks: list[Task]):
         """
         Creates the dictionary mapping all indicators names to their corresponding
         Task id in the Session object.
@@ -197,7 +204,7 @@ class SessionHandler:
 
             self.indicator_tasks.update({task.name: task.id})
             if task.children:
-                self.build_tasks_dict(list(task.children.values()))
+                self._build_tasks_dict(list(task.children.values()))
 
     def retrieve_metadata(self, url: str) -> None:
         """
@@ -208,6 +215,8 @@ class SessionHandler:
         # See what is possible here
         pass
 
+    # FIXME: Does not work. Does not take children into account
+    #   We need to automatically update a session status once a task status is updated
     def is_running(self) -> bool:
         """Checks whether the session is still running or not"""
         return any([
@@ -268,23 +277,36 @@ class SessionHandler:
                 else:
                     count_na += 1
 
-        self.session_model.score_all = passed_all / len(all_tasks)
+        self.session_model.score_all = 0 if len(all_tasks) == 0 else passed_all / len(all_tasks)
 
-        self.session_model.score_applicable_all = passed_applicable_all / count_applicable_all
-        self.session_model.score_applicable_essential = passed_applicable_essential / count_applicable_essential
-        self.session_model.score_applicable_nonessential = passed_applicable_nonessential / count_applicable_nonessential
+        self.session_model.score_applicable_all = 0 \
+            if count_applicable_all == 0 \
+            else passed_applicable_all / count_applicable_all
 
-        self.session_model.score_all_essential = passed_all_essential / count_all_essential
-        self.session_model.score_all_nonessential = passed_all_nonessential / count_all_nonessential
+        self.session_model.score_applicable_essential = 0 \
+            if count_applicable_essential == 0 \
+            else passed_applicable_essential / count_applicable_essential
 
-        self.session_model.ratio_not_applicable = count_na / len(all_tasks)
+        self.session_model.score_applicable_nonessential = 0 \
+            if count_applicable_nonessential == 0 \
+            else passed_applicable_nonessential / count_applicable_nonessential
+
+        self.session_model.score_all_essential = 0 \
+            if count_all_essential == 0 \
+            else passed_all_essential / count_all_essential
+
+        self.session_model.score_all_nonessential = 0 \
+            if count_all_nonessential == 0 \
+            else passed_all_nonessential / count_all_nonessential
+
+        self.session_model.ratio_not_applicable = 0 \
+            if len(all_tasks) == 0 \
+            else count_na / len(all_tasks)
 
     def get_task_from_indicator(self, indicator: str):
         """Returns the Task in Session associated with an indicator"""
         return self.indicator_tasks[indicator] if indicator in self.indicator_tasks else None
 
-    # TODO: Test that this work even if children are created before parents
-    # TODO: Test that the default statuses are correctly set
     def create_tasks(self):
         """
         Creates all the tasks for the session based on existing fair_indicators
@@ -379,16 +401,15 @@ class SessionHandler:
                 # FIXME: This will cause issues if a Task has multiple parents
                 if parent_indicator in self.indicator_tasks:
                     parent_key = self.get_task_from_indicator(parent_indicator)
-                    parent_task = self.session_model.get_task(parent_key)
-                    parent_task.children[task_id] = task
+                    self.session_model.add_task(task, parent_key)
 
                 else:
                     parent_task = self._create_task(parent_indicator)
                     self.indicator_tasks[parent_indicator] = parent_task.id
-                    parent_task.children[task_id] = task
+                    self.session_model.add_task(task, parent_task.id)
 
         else:
-            self.session_model.tasks[task_id] = task
+            self.session_model.add_task(task)
 
         default_status, default_disabled = self._get_default_task_status(indicator.name)
         task.status = default_status

@@ -9,6 +9,7 @@ from app.metrics.assessments_lifespan import fair_indicators
 logger = logging.getLogger(__name__)
 
 
+# Needed to be marked like this because only asyncclients get the fair_indicators loaded
 @pytest.mark.anyio
 async def test_fair_indicators(test_asyncclient):
     assert fair_indicators != {}

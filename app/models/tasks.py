@@ -72,6 +72,9 @@ class Task(BaseModel):
     class Config:
         validate_assignment = True
 
+    def add_task(self, child: "Task"):
+        self.children.update({child.id: child})
+
     @root_validator
     def make_score(cls, values: dict) -> float:
         """
