@@ -1,21 +1,16 @@
-from app.models import Session
+import pytest
+
+from app.models import Session, SessionHandler
+from app.dependencies.settings import get_settings
+
+from tests.factories import ManualSessionSubjectFactory
 
 
 def test_create_session_manual_session(test_client, redis_client):
-    input_form = {
-        "subject_type": "manual",
-        "has_archive": True,
-        "has_model": True,
-        "has_archive_metadata": True,
-        "is_model_standard": False,
-        "is_archive_standard": False,
-        "is_model_metadata_standard": False,
-        "is_archive_metadata_standard": False,
-        "is_biomodel": False,
-        "is_pmr": False,
-    }
+    user_input = ManualSessionSubjectFactory()
+    input_json = user_input.dict()
 
-    res = test_client.post("/session", json=input_form)
+    res = test_client.post("/session", json=input_json)
     assert res.status_code == 200
     session_data = res.json()
     # FIXME: Is there a way to get redis running in test env?
@@ -32,9 +27,29 @@ def test_create_session_manual_session(test_client, redis_client):
     assert s.score_applicable_essential == 0
 
 
-def test_create_biomodel_session(test_client):
-    pass
+@pytest.mark.parametrize("repo", ["biomodel", "pmr"])
+def test_create_repository_based_session(repo, test_client, redis_client):
+    config = get_settings()
+    user_input = {
+        "biomodel": ManualSessionSubjectFactory(is_biomodel=True),
+        "pmr": ManualSessionSubjectFactory(is_pmr=True),
+    }[repo]
 
+    input_json = user_input.dict()
 
-def test_create_pmr_session(test_client):
-    pass
+    res = test_client.post("/session", json=input_json)
+    assert res.status_code == 200
+
+    s = Session(**res.json())
+    sh = SessionHandler.from_existing_session(s)
+
+    dependencies = {
+        "biomodel": config.biomodel_assessment_status,
+        "pmr": config.pmr_indicator_status,
+    }[repo]
+
+    for indicator, expected_status in dependencies.items():
+        task_key = sh.get_task_from_indicator(indicator)
+        task = s.get_task(task_key)
+
+        assert task.status == expected_status

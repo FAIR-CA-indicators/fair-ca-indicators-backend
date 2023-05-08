@@ -79,7 +79,7 @@ class Task(BaseModel):
         self.children.update({child.id: child})
 
     @root_validator
-    def make_score(cls, values: dict) -> float:
+    def make_score(cls, values: dict) -> dict:
         """
         Calculate the score based on the Task status. This erases possible user
         input in case someone would cheat.
@@ -135,10 +135,11 @@ class Task(BaseModel):
         not applicable, or not answered. True otherwise
         """
         return (
-            self.status != "success"
-            and self.status != "warnings"
-            and self.status != "not_applicable"
-            and self.status != "not_answered"
+            self.status != TaskStatus.success
+            and self.status != TaskStatus.warnings
+            and self.status != TaskStatus.not_applicable
+            and self.status != TaskStatus.not_answered
+            and self.status != TaskStatus.error
         )
 
 
@@ -231,9 +232,9 @@ class IndicatorDependency:
         self._check_task_dependencies(dependencies)
 
         if self.operation is DependencyType.or_:
-            return any([d.status == "failed" for d in dependencies])
+            return any([d.status == TaskStatus.failed for d in dependencies])
         if self.operation is DependencyType.and_:
-            return all([d.status == "failed" for d in dependencies])
+            return all([d.status == TaskStatus.failed for d in dependencies])
 
     def is_automatically_disabled(self, dependencies: list["Task"]) -> bool:
         """

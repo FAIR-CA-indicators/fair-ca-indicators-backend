@@ -5,6 +5,7 @@ from app.models import (
     TaskStatus,
     TaskPriority,
 )
+from app.dependencies.settings import get_settings
 
 from tests.factories import (
     ManualSessionSubjectFactory,
@@ -221,7 +222,7 @@ def test_session_handler_default_task_status():
 # Definitely needs to be async to access fair_indicators global object
 def test_session_handler_create_tasks():
     # Will fail if metrics changes format
-    metrics_file = open("app/metrics/metrics.csv", "r")
+    metrics_file = open(get_settings().indicators_path, "r")
     indicators = [line.split(",")[0].strip('"') for line in metrics_file.readlines()]
     metrics_file.close()
     indicators = indicators[1:]  # Dropping column name

@@ -108,7 +108,7 @@ def test_indicator_dependency_automatic_fail(parent_status, should_fail):
         (TaskStatus.warnings, False),
         (TaskStatus.not_applicable, False),
         (TaskStatus.not_answered, False),
-        (TaskStatus.error, True),  # Should it be disabled?
+        (TaskStatus.error, False),  # Should it be disabled?
     ],
 )
 def test_indicator_dependency_automatic_disable(parent_status, should_disable):

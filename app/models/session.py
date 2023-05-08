@@ -473,3 +473,6 @@ class SessionHandler:
     def json(self):
         """Returns the json representation of the session model"""
         return self.session_model.json()
+
+    def dict(self):
+        return self.session_model.dict()

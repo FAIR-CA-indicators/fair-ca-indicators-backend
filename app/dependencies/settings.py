@@ -7,6 +7,7 @@ from typing import List
 class Config(BaseSettings):
     app_name: str = "FAIR Combine API"
     redis_db_number: int = 0
+    indicators_path = "app/metrics/metrics.csv"
 
     allowed_origins: List[str] = []
     # List of indicators that applied to archive (if no archive, their statuses will be set to 'failed')

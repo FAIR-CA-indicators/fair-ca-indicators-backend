@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from csv import DictReader
 
+from app.dependencies.settings import get_settings
 import app.models as models
 
 fair_indicators = {}
@@ -19,6 +20,7 @@ async def get_tasks_definitions(app: FastAPI):
     :return: None
     """
     regex = re.compile(r"^CA-RDA-([FAIR][1-9](\.[0-9])?)-")
+    config = get_settings()
 
     def parse_line(line):
         sub_group = regex.search(line["TaskName"]).groups()[0]
@@ -36,7 +38,7 @@ async def get_tasks_definitions(app: FastAPI):
         }
 
     # Get the list of tasks and their definitions from internal file
-    with open("app/metrics/metrics.csv", "r") as file_handler:
+    with open(config.indicators_path, "r") as file_handler:
         csv_reader = DictReader(file_handler, dialect="unix")
         [fair_indicators.update(parse_line(line)) for line in csv_reader]
 

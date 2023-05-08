@@ -17,9 +17,9 @@ class ManualSessionSubjectFactory(factory.Factory):
         model = SessionSubjectIn
 
     subject_type = "manual"
-    has_archive = False
-    has_model = False
-    has_archive_metadata = False
+    has_archive = True
+    has_model = True
+    has_archive_metadata = True
     is_model_standard = False
     is_archive_standard = False
     is_model_metadata_standard = False
