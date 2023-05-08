@@ -392,6 +392,8 @@ class SessionHandler:
 
         default_status, default_disabled = self._get_default_task_status(indicator.name)
         task.status = default_status
+        if default_status != TaskStatus.queued:
+            task.automated = True
         task.disabled = default_disabled
         return task
 
