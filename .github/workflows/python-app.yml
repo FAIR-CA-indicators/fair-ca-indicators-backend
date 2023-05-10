@@ -38,4 +38,5 @@ jobs:
         black --check --verbose -- . 
     - name: Test with pytest
       run: |
+        redis-stack-server --daemonize yes
         pytest
