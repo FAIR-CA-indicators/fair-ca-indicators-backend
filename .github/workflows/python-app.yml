@@ -46,9 +46,6 @@ jobs:
       - name: Lint with black
         run: |
           black --check --verbose -- . 
-      - name: Start redis server
-        run: |
-          redis-stack-server --daemonize yes --port 6379
       - name: Test with pytest
         run: |
           pytest
