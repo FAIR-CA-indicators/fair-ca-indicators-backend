@@ -15,18 +15,7 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
-    
-    services:
-      redis:
-        image: redis
-        ports: 
-          - 6379/tcp
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    
+        
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.9
@@ -38,6 +27,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r test-requirements.txt
+        sudo apt-get install -y redis-stack-server
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -47,7 +37,10 @@ jobs:
     - name: Lint with black
       run: |
         black --check --verbose -- . 
+
     - name: Test with pytest
       run: |
-        redis-stack-server --daemonize yes
+        redis-stack-server --daemonize yes --port 6379
         pytest
+      env:
+        FAIR_COMBINE_ENV: test
