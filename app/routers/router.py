@@ -1,3 +1,5 @@
+import uuid
+import os
 from shutil import copyfileobj
 from fastapi import APIRouter, HTTPException, UploadFile, Depends
 from typing import List, Optional
@@ -38,6 +40,7 @@ def create_session(
     :param uploaded_file: If subject type is 'file', this contains the uploaded omex archive.
     :return: The created session
     """
+    session_id = str(uuid.uuid4())
     if subject.subject_type is SubjectType.url:
         raise HTTPException(
             501, "The api only supports manual assessments at the moment"
@@ -50,14 +53,16 @@ def create_session(
 
         # Loading file
         try:
-            path = f"./session_files/{uploaded_file.filename}"
+            # This is wrong path, file should be moved to the session directory
+            path = f"./session_files/{session_id}/{uploaded_file.filename}"
+            os.mkdir(f"./session_files/{session_id}")
             with open(path, "wb") as buffer:
                 copyfileobj(uploaded_file.file, buffer)
             subject.path = path
         finally:
             uploaded_file.file.close()
 
-    session_handler = SessionHandler.from_user_input(subject)
+    session_handler = SessionHandler.from_user_input(session_id, subject)
     redis_app.json().set(
         f"session:{session_handler.session_model.id}",
         "$",

@@ -15,6 +15,8 @@ from app.metrics.assessments_lifespan import fair_indicators
 from app.dependencies.settings import get_settings
 from app.decorators import as_form
 
+# from app.importers import OmexImporter, ModelImporter
+
 
 class SessionStatus(str, Enum):
     """
@@ -173,6 +175,10 @@ class SessionHandler:
         self.user_input = session.session_subject
         self.session_model = session
         self.indicator_tasks = {}
+        self.file_path = None
+
+        if self.user_input.subject_type in [SubjectType.url, SubjectType.file]:
+            self.retrieve_metadata(self.user_input.path)
 
         if not session.tasks:
             self.create_tasks()
@@ -181,15 +187,18 @@ class SessionHandler:
             self._build_tasks_dict(list(self.session_model.tasks.values()))
 
     @classmethod
-    def from_user_input(cls, session_data: SessionSubjectIn) -> "SessionHandler":
+    def from_user_input(
+        cls, session_id: str, session_data: SessionSubjectIn
+    ) -> "SessionHandler":
         """
         Creates a session based on user input (for example from the route `create_session`)
         and returns the handler for this session
 
+        :param session_id: The session identifier that will be used
         :param session_data:
         :return: A SessionHandler object
         """
-        session = Session(id=str(uuid4()), session_subject=session_data)
+        session = Session(id=session_id, session_subject=session_data)
         return cls(session)
 
     @classmethod
@@ -222,12 +231,18 @@ class SessionHandler:
             if task.children:
                 self._build_tasks_dict(list(task.children.values()))
 
-    def retrieve_metadata(self, url: str) -> None:
+    def retrieve_metadata(self, path: str) -> None:
         """
         TODO: Method to retrieve the archive and models for url and file type assessments
-        :param url:
+        :param path: Either a url link or the file PATH towards a Omex archive or model file
         :return:
         """
+        if self.user_input.subject_type is SubjectType.url:
+            self.download_model(path)
+
+        # importer = self.get_importer()
+
+    def download_model(self, url: str) -> None:
         # See what is possible here
         pass
 

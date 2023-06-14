@@ -2,3 +2,6 @@ fastapi==0.95.0
 uvicorn==0.21.1
 redis==4.5.4
 fair-test==0.1.4
+python-multipart==0.0.6
+python-libcombine==0.2.19
+python-libsbml==5.20.1

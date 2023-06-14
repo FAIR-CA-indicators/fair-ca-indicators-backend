@@ -5,11 +5,20 @@ from .session import (
     SessionSubjectIn,
     SubjectType,
 )
-from .tasks import Task, TaskStatus, Indicator, TaskPriority, IndicatorDependency
+from .tasks import (
+    Task,
+    TaskStatus,
+    TaskStatusIn,
+    Indicator,
+    TaskPriority,
+    IndicatorDependency,
+)
+from .combine_object import CombineArchive
 
 __all__ = [
     Task,
     TaskStatus,
+    TaskStatusIn,
     Indicator,
     TaskPriority,
     Session,
@@ -18,4 +27,5 @@ __all__ = [
     SessionSubjectIn,
     SubjectType,
     IndicatorDependency,
+    CombineArchive,
 ]
