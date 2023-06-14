@@ -1,9 +1,18 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+from shutil import copyfileobj
+from fastapi import APIRouter, HTTPException, UploadFile, Depends
+from typing import List, Optional
 from redis.exceptions import ResponseError
 
-from app.models.session import Session, SessionSubjectIn, SessionHandler, SubjectType
-from app.models.tasks import Task, TaskStatusIn, Indicator
+
+from app.models import (
+    Session,
+    SessionSubjectIn,
+    SessionHandler,
+    SubjectType,
+    Task,
+    TaskStatusIn,
+    Indicator,
+)
 from app.metrics.assessments_lifespan import fair_indicators
 from app.redis_controller import redis_app
 
@@ -11,7 +20,10 @@ base_router = APIRouter()
 
 
 @base_router.post("/session", tags=["Sessions"])
-def create_session(subject: SessionSubjectIn) -> Session:
+def create_session(
+    subject: SessionSubjectIn = Depends(SessionSubjectIn.as_form),
+    uploaded_file: Optional[UploadFile] = None,
+) -> Session:
     """
     Create a new session based on user input
 
@@ -23,20 +35,34 @@ def create_session(subject: SessionSubjectIn) -> Session:
     The created session
     \f
     :param subject: Pydantic model containing user input.
+    :param uploaded_file: If subject type is 'file', this contains the uploaded omex archive.
     :return: The created session
     """
-    if subject.subject_type is not SubjectType.manual:
+    if subject.subject_type is SubjectType.url:
         raise HTTPException(
             501, "The api only supports manual assessments at the moment"
         )
-    session_handler = SessionHandler.from_user_input(subject)
+    elif subject.subject_type is SubjectType.file:
+        if uploaded_file is None:
+            raise HTTPException(
+                422, "No file was uploaded for assessment. Impossible to process query"
+            )
 
+        # Loading file
+        try:
+            path = f"./session_files/{uploaded_file.filename}"
+            with open(path, "wb") as buffer:
+                copyfileobj(uploaded_file.file, buffer)
+            subject.path = path
+        finally:
+            uploaded_file.file.close()
+
+    session_handler = SessionHandler.from_user_input(subject)
     redis_app.json().set(
         f"session:{session_handler.session_model.id}",
         "$",
-        obj=session_handler.session_model.dict(),
+        obj=session_handler.session_model.dict()
     )
-
     return session_handler.session_model
 
 

@@ -13,6 +13,7 @@ from .tasks import (
 )
 from app.metrics.assessments_lifespan import fair_indicators
 from app.dependencies.settings import get_settings
+from app.decorators import as_form
 
 
 class SessionStatus(str, Enum):
@@ -48,6 +49,7 @@ class SubjectType(str, Enum):
     manual = "manual"
 
 
+@as_form
 class SessionSubjectIn(BaseModel):
     """
     Data input necessary to create a session object.
@@ -97,7 +99,7 @@ class SessionSubjectIn(BaseModel):
                 or values.get("is_biomodel") is None
             ):
                 raise ValueError("Self-assessments needs the form filled")
-        else:
+        elif subject_type is SubjectType.url:
             if values.get("path") is None:
                 raise ValueError(
                     "Url and file assessments need a url or path respectively"
