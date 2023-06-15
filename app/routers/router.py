@@ -66,7 +66,7 @@ def create_session(
     redis_app.json().set(
         f"session:{session_handler.session_model.id}",
         "$",
-        obj=session_handler.session_model.dict()
+        obj=session_handler.session_model.dict(),
     )
     return session_handler.session_model
 
