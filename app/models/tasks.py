@@ -285,5 +285,3 @@ class AutomatedTask(Task):
             raise ValueError(f"Task method {self.task_method} was not found")
 
         celery_task.delay(self.dict(), data)
-
-

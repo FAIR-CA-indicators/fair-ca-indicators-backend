@@ -3,7 +3,8 @@ import requests
 from time import sleep
 from app.celery.celery_app import app
 
-from ... import routers, models
+from ... import models
+
 
 @app.task
 def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
@@ -41,7 +42,14 @@ def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
     status = models.TaskStatusIn(status=models.TaskStatus(result))
 
     print(f"Task status computed: {result}")
-    requests.patch(f"http://localhost:8000/session/{session_id}/tasks/{task_id}", json=status.dict())
+    # Needs to send a request for the task to be updated
+    requests.patch(
+        f"http://localhost:8000/session/{session_id}/tasks/{task_id}",
+        json=status.dict(),
+    )
 
-    # routers.update_task(session_id, task_id, status)  # Does not work because celery does not have access to fair_indicators
-    # redis_app.json().set(f"session:{session_id}", f".tasks.{task_id}.status", obj=result)  # Works, but does not trigger updating of children
+    # Does not work because celery does not have access to fair_indicators
+    # routers.update_task(session_id, task_id, status)
+
+    # Works, but does not trigger updating of children
+    # redis_app.json().set(f"session:{session_id}", f".tasks.{task_id}.status", obj=result)
