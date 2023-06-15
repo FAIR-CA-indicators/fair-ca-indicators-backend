@@ -104,9 +104,7 @@ class SessionSubjectIn(BaseModel):
                 raise ValueError("Self-assessments needs the form filled")
         elif subject_type is SubjectType.url:
             if values.get("path") is None:
-                raise ValueError(
-                    "Url and file assessments need a url or path respectively"
-                )
+                raise ValueError("Url assessments need a url")
         return subject_type
 
 

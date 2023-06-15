@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 
 from app.models import SessionHandler, Session, TaskStatus
@@ -6,7 +8,8 @@ from tests.factories import ManualSessionSubjectFactory
 
 def test_update_disabled_task(test_client, redis_client):
     user_input = ManualSessionSubjectFactory()
-    session_handler = SessionHandler.from_user_input(user_input)
+    id = "test-session"
+    session_handler = SessionHandler.from_user_input(id, user_input)
 
     disabled_task = list(session_handler.session_model.tasks.values())[0]
     disabled_task.disabled = True
@@ -38,7 +41,8 @@ def test_update_disabled_task(test_client, redis_client):
 )
 def test_update_task(status, test_client, redis_client):
     user_input = ManualSessionSubjectFactory()
-    session_handler = SessionHandler.from_user_input(user_input)
+    id = str(uuid.uuid4())
+    session_handler = SessionHandler.from_user_input(id, user_input)
 
     task = [
         t for t in session_handler.session_model.tasks.values() if t.children != {}
