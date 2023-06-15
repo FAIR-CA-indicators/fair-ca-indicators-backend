@@ -16,6 +16,7 @@ from app.metrics.assessments_lifespan import fair_indicators
 from app.dependencies.settings import get_settings
 from app.redis_controller import redis_app
 
+
 class SessionStatus(str, Enum):
     """
     List of statuses for a user session:
@@ -211,18 +212,27 @@ class SessionHandler:
         :param session_id: A pre-existing session identifier
         :return: A SessionHandler object
         """
+
         def build_task(task_dict):
             children = task_dict.pop("children")
             if children:
-                children = {child_key: build_task(child_dict) for child_key, child_dict in children}
+                children = {
+                    child_key: build_task(child_dict)
+                    for child_key, child_dict in children
+                }
             try:
                 task = Task(**task_dict, children=children)
                 return task
             except ValidationError as e:
-                raise ValueError(f"Failed to build task with name {task_dict['name']}: {str(e)}")
+                raise ValueError(
+                    f"Failed to build task with name {task_dict['name']}: {str(e)}"
+                )
 
         session_json = redis_app.json().get(f"session:{session_id}")
-        tasks = {task_key: build_task(task_dict) for task_key, task_dict in session_json.pop("tasks").items()}
+        tasks = {
+            task_key: build_task(task_dict)
+            for task_key, task_dict in session_json.pop("tasks").items()
+        }
 
         subject = session_json.pop("session_subject")
         session = Session(**session_json, session_subject=subject, tasks=tasks)
@@ -452,21 +462,26 @@ class SessionHandler:
         task_id = str(uuid4())
         config = get_settings()
 
-        task = AutomatedTask(
-            id=task_id,
-            name=indicator.name,
-            priority=TaskPriority(indicator.priority),
-            session_id=self.id,
-            task_method=config.automated_assessments[indicator.name]
-        ) \
-            if indicator.name in config.automated_assessments  \
+        is_task_automated = (
+            self.user_input.subject_type is not SubjectType.manual
+            and indicator.name in config.automated_assessments
+        )
+        task = (
+            AutomatedTask(
+                id=task_id,
+                name=indicator.name,
+                priority=TaskPriority(indicator.priority),
+                session_id=self.id,
+                task_method=config.automated_assessments[indicator.name],
+            )
+            if is_task_automated
             else Task(
                 id=task_id,
                 name=indicator.name,
                 priority=TaskPriority(indicator.priority),
                 session_id=self.id,
             )
-
+        )
 
         task_dependencies = config.assessment_dependencies.get(indicator.name)
         if task_dependencies is not None:
