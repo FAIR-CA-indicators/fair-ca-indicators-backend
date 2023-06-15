@@ -16,6 +16,7 @@ from app.dependencies.settings import get_settings
 from app.decorators import as_form
 
 # from app.importers import OmexImporter, ModelImporter
+from .combine_object import CombineArchive
 
 
 class SessionStatus(str, Enum):
@@ -171,14 +172,14 @@ class SessionHandler:
 
         :param session: The session object to handle
         """
-        self.id = session.id
-        self.user_input = session.session_subject
-        self.session_model = session
-        self.indicator_tasks = {}
-        self.file_path = None
+        self.id: str = session.id
+        self.user_input: SessionSubjectIn = session.session_subject
+        self.session_model: Session = session
+        self.indicator_tasks: dict = {}
+        self.assessed_data: Optional["CombineArchive"] = None
 
         if self.user_input.subject_type in [SubjectType.url, SubjectType.file]:
-            self.retrieve_metadata(self.user_input.path)
+            self.assessed_data = self.retrieve_data(self.user_input.path)
 
         if not session.tasks:
             self.create_tasks()
@@ -231,16 +232,18 @@ class SessionHandler:
             if task.children:
                 self._build_tasks_dict(list(task.children.values()))
 
-    def retrieve_metadata(self, path: str) -> None:
+    def retrieve_data(self, path: str) -> CombineArchive:
         """
         TODO: Method to retrieve the archive and models for url and file type assessments
         :param path: Either a url link or the file PATH towards a Omex archive or model file
-        :return:
+        :return: A CombineArchive object. This will be empty except for the model data if
+            the provided file is not a Omex archive
         """
         if self.user_input.subject_type is SubjectType.url:
-            self.download_model(path)
+            filename = self.download_model(path)
+            path = f"app/session_files/{self.id}/{filename}"
 
-        # importer = self.get_importer()
+        return CombineArchive(path, file_is_archive=path.endswith(".omex"))
 
     def download_model(self, url: str) -> None:
         # See what is possible here

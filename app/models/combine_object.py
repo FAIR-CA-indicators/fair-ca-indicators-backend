@@ -1,19 +1,22 @@
 import libcombine
+import libsbml
+
+from tempfile import NamedTemporaryFile
 
 
 class CombineArchive(libcombine.CombineArchive):
-    # TODO
-    #   Need to set the model(s)
-    #   Need to set the model(s) metadata
-    #   Need to set the archive metadata (from manifest.xml)
-
     def __init__(self, filename: str, file_is_archive: bool = True) -> None:
         super().__init__()
         self.is_from_archive = file_is_archive
         if not file_is_archive:
             self.locations = []
 
-            self.model = CombineModel(filename)
+            self.model = CombineSbml(filename)
+            try:
+                assert self.model.content.model is not None
+            except AssertionError:
+                raise ValueError("The provided SBML file does not contain any model")
+
             self.model_metadata = None
             self.entries = {filename: self.model}
             self.entries_metadata = {}
@@ -26,6 +29,7 @@ class CombineArchive(libcombine.CombineArchive):
             self.entries = {}
             self.entries_metadata = {}
             self.model = None
+            self.model_location = None
             self.model_metadata = None
 
             for i in range(self.getNumEntries()):
@@ -36,16 +40,28 @@ class CombineArchive(libcombine.CombineArchive):
                     {str(loc): self.getMetadataForLocation(loc)}
                 )
 
-                if loc.endswith(".xml") and self.model is None:
-                    # Here make tmp files to read for CombineModel and CombineMetadata
-                    self.model = entry
+                if (
+                    loc.endswith(".xml")
+                    and not loc.endswith("manifest.xml")
+                    and self.model is None
+                ):
+                    # Here make tmp files to read for CombineModel and CombineMetada
+                    with NamedTemporaryFile("w+") as file:
+                        content = self.extractEntryToString(entry.getLocation())
+                        file.write(content)
+                        sbml_object = CombineSbml(file.name)
+                        if sbml_object.content.model is not None:
+                            self.model = sbml_object
+                            self.model_location = str(loc)
+                            break
+
                     self.model_metadata = self.entries_metadata[str(loc)]
 
 
-class CombineModel:
+class CombineSbml:
     def __init__(self, filename: str):
+        # Here just retrieve file content to build the CombineModel
+        self.content = libsbml.readSBML(filename)
+        print(f"Model recovered from tempfile:\n{self.content.model.id}")
+
         pass
-
-
-class CombineMetadata:
-    pass
