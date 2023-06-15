@@ -5,7 +5,15 @@ from .session import (
     SessionSubjectIn,
     SubjectType,
 )
-from .tasks import Task, TaskStatus, TaskStatusIn, Indicator, TaskPriority, IndicatorDependency, AutomatedTask
+from .tasks import (
+    Task,
+    TaskStatus,
+    TaskStatusIn,
+    Indicator,
+    TaskPriority,
+    IndicatorDependency,
+    AutomatedTask,
+)
 
 __all__ = [
     Task,
