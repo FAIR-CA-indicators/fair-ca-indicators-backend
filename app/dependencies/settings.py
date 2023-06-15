@@ -3,8 +3,12 @@ from functools import lru_cache
 from pydantic import BaseSettings
 from typing import List
 
+
 class Config(BaseSettings):
     app_name: str = "FAIR Combine API"
+    redis_db_number: int = 0
+    indicators_path = "app/metrics/metrics.csv"
+
     allowed_origins: List[str] = []
     # List of indicators that applied to archive (if no archive, their statuses will be set to 'failed')
     archive_indicators: List[str] = [
@@ -81,7 +85,10 @@ class Config(BaseSettings):
     # Mapping of indicators with their direct parent. Until parent status is 'success', children cannot be set.
     # Not happy with this, as it means that the Config is dynamically set
     assessment_dependencies: dict[str, dict] = {
-        "CA-RDA-I3-02Archive": {"condition": "or", "indicators": ["CA-RDA-I3-01Archive"]},
+        "CA-RDA-I3-02Archive": {
+            "condition": "or",
+            "indicators": ["CA-RDA-I3-01Archive"],
+        },
         "CA-RDA-I3-02Model": {"condition": "or", "indicators": ["CA-RDA-I3-01Model"]},
         "CA-RDA-I3-03MA": {"condition": "or", "indicators": ["CA-RDA-I3-01MA"]},
         "CA-RDA-I3-03MM": {"condition": "or", "indicators": ["CA-RDA-I3-01MM"]},
@@ -101,8 +108,12 @@ class ProdConfig(Config):
     pass
 
 
+class TestConfig(Config):
+    redis_db_number = 15
+
+
 @lru_cache()
 def get_settings():
     env = os.environ.get("FAIR_COMBINE_ENV", "dev")
-    config = {"dev": DevConfig, "prod": ProdConfig}.get(env)()
+    config = {"dev": DevConfig, "prod": ProdConfig, "test": TestConfig}.get(env)()
     return config
