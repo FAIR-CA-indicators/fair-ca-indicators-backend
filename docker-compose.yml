@@ -32,4 +32,6 @@ services:
       - backend
     container_name: "faircombine-celery"
     command: celery -A app.celery.celery_app worker -l INFO
+    volumes:
+      - ./app:/faircombine/app
 

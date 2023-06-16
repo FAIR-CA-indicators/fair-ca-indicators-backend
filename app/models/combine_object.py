@@ -55,9 +55,8 @@ class CombineArchive(libcombine.CombineArchive):
                         if sbml_object.content.model is not None:
                             self.main_model_object = sbml_object
                             self.main_model_location = str(loc)
+                            self.main_model_metadata = self.entries_metadata[str(loc)]
                             break
-
-                    self.main_model_metadata = self.entries_metadata[str(loc)]
 
     def dict(self):
         return {

@@ -16,6 +16,12 @@ redis-stack-server
 ```bash
 uvicorn app.main:app --reload
 ```
+4. (Optional) If you want the automated assessments to work, you need a celery worker running.
+The option `-l INFO` can be added at the end of the line to increase the log level to INFO
+```bash
+celery -A app.celery.celery_app worker
+```
+
 
 The documentation is available at `http://localhost:8000/docs` (in SwaggerUI format) and at `http://localhost:8000/redoc` (in ReDoc format)
 
@@ -32,6 +38,8 @@ docker-compose up -d
 Endpoints are accessible at `http://localhost:8000`. 
 
 If you have redis-cli or RedisInsight installed, the redis endpoint can be accessed at `http://localhost:6379` 
+
+This docker container also includes an image for the celery worker.
 
 # Testing
 
