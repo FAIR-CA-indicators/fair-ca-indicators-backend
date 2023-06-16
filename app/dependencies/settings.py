@@ -6,8 +6,13 @@ from typing import List
 
 class Config(BaseSettings):
     app_name: str = "FAIR Combine API"
+    redis_url = os.environ.get("REDIS_URL", "localhost")
+    redis_port = os.environ.get("REDIS_PORT", 6379)
     redis_db_number: int = 0
     indicators_path = "app/metrics/metrics.csv"
+    celery_broker = os.environ.get(
+        "CELERY_BROKER_URL", f"redis://{redis_url}:{redis_port}/{redis_db_number}"
+    )
 
     allowed_origins: List[str] = []
     # List of indicators that applied to archive (if no archive, their statuses will be set to 'failed')

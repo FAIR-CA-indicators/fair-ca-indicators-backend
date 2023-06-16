@@ -9,6 +9,7 @@ services:
       - redis
     volumes:
       - ./app:/faircombine/app
+      - ./session_files:/faircombine/session_files
 
   redis:
     image: redis/redis-stack-server:latest

@@ -10,6 +10,7 @@ COPY requirements.txt /faircombine/requirements.txt
 RUN python3 -m pip install --no-cache-dir --upgrade -r /faircombine/requirements.txt
 
 COPY ./app /faircombine/app
+COPY ./session_files /faicombine/session_files
 
 ENV REDIS_URL="faircombine-redis"
 ENV REDIS_PORT=6379
