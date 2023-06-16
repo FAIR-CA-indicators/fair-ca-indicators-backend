@@ -55,7 +55,7 @@ def create_session(
         try:
             # This is wrong path, file should be moved to the session directory
             path = f"./session_files/{session_id}/{uploaded_file.filename}"
-            os.mkdir(f"./session_files/{session_id}")
+            os.makedirs(f"./session_files/{session_id}")
             with open(path, "wb") as buffer:
                 copyfileobj(uploaded_file.file, buffer)
             subject.path = path
