@@ -6,6 +6,8 @@ from typing import List
 
 class Config(BaseSettings):
     app_name: str = "FAIR Combine API"
+    backend_url = os.environ.get("BACKEND_URL", "localhost")
+    backend_port = os.environ.get("BACKEND_PORT", 8000)
     redis_url = os.environ.get("REDIS_URL", "localhost")
     redis_port = os.environ.get("REDIS_PORT", 6379)
     redis_db_number: int = 0

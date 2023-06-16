@@ -1,7 +1,9 @@
 version: '3'
 services:
   backend:
-    build: .
+    build:
+      context: .
+      target: main
     container_name: "faircombine-backend"
     ports:
       - "8000:80"
@@ -21,3 +23,13 @@ services:
       - "6379:6379"
     volumes:
       - ./redis_data:/var/lib/redis-stack/
+
+  celery:
+    build:
+      context: .
+      target: celery
+    depends_on:
+      - backend
+    container_name: "faircombine-celery"
+    command: celery -A app.celery.celery_app worker -l INFO
+

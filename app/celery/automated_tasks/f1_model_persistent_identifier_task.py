@@ -1,7 +1,7 @@
 import requests
 
 from app.celery.celery_app import app
-
+from app.dependencies.settings import get_settings
 from ... import models
 
 
@@ -28,6 +28,7 @@ def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
     :param data: (Meta)Data to evaluate
     :return: None
     """
+    config = get_settings()
     print("Execution successfully called")
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
@@ -43,8 +44,10 @@ def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
 
     print(f"Task status computed: {result}")
     # Needs to send a request for the task to be updated
+    url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
+    print(f"Patching {url}")
     requests.patch(
-        f"http://localhost:8000/session/{session_id}/tasks/{task_id}",
+        url,
         json=status.dict(),
     )
 

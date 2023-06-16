@@ -171,6 +171,9 @@ class SessionHandler:
     based on user input, calculates the scores, ...
     """
 
+    # TODO:
+    #   Do not run the tasks until the starting point is saved in redis!
+
     def __init__(self, session: Session) -> None:
         """
         Creates the handler based on a session. This session can already exist
@@ -528,9 +531,6 @@ class SessionHandler:
             task.automated = True
         task.disabled = default_disabled
 
-        if isinstance(task, AutomatedTask) and not task.disabled:
-            task.do_evaluate(self.data.dict())
-
         return task
 
     def update_task_children(self, task_key):
@@ -547,6 +547,12 @@ class SessionHandler:
             default_status, default_disabled = self._get_default_task_status(child.name)
             child.status = default_status
             child.disabled = default_disabled
+
+    def start_automated_tasks(self):
+        for task_id in self.indicator_tasks.values():
+            task = self.session_model.get_task(task_id)
+            if isinstance(task, AutomatedTask) and not task.disabled:
+                task.do_evaluate(self.data.dict())
 
     def json(self):
         """Returns the json representation of the session model"""

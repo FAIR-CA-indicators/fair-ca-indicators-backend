@@ -69,6 +69,7 @@ def create_session(
             "$",
             obj=session_handler.session_model.dict(),
         )
+        session_handler.start_automated_tasks()
     except TypeError as e:
         print(session_handler.session_model)
         print(session_handler.session_model.dict())
