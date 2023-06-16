@@ -64,7 +64,7 @@ class CombineArchive(libcombine.CombineArchive):
             "locations": self.locations,
             "main_model_object": self.main_model_object.dict(),
             "main_model_location": self.main_model_location,
-            "main_model_metadata": self.main_model_metadata,
+            "main_model_metadata": CombineSbmlMetadata(self.main_model_metadata).dict(),
         }
 
     def json(self):
@@ -80,3 +80,13 @@ class CombineSbml:
         return {
             "id": self.content.model.id,
         }
+
+
+class CombineSbmlMetadata:
+    # TODO
+    def __init__(self, omex_description: libcombine.OmexDescription):
+        self.metadata = omex_description or None
+
+    # TODO
+    def dict(self):
+        return {"found": True}

@@ -77,7 +77,7 @@ class SessionSubjectIn(BaseModel):
     - *subject_type*: See SubjectType model
     """
 
-    path: Union[HttpUrl, FileUrl, FilePath] = None
+    path: Union[HttpUrl, FileUrl, FilePath, None] = None
     has_archive: Optional[bool]
     has_model: Optional[bool]
     has_archive_metadata: Optional[bool]
@@ -111,7 +111,8 @@ class SessionSubjectIn(BaseModel):
 
     def dict(self, **kwargs):
         returned_dict = super().dict(**kwargs)
-        returned_dict["path"] = str(returned_dict["path"])
+        if returned_dict.get("path") is not None:
+            returned_dict["path"] = str(returned_dict["path"])
         return returned_dict
 
 
