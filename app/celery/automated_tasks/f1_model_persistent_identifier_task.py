@@ -1,17 +1,12 @@
 import requests
 
-from typing import TYPE_CHECKING
-from time import sleep
 from app.celery.celery_app import app
 
 from ... import models
 
-if TYPE_CHECKING:
-    from ...models import CombineArchive
-
 
 @app.task
-def f1_model_persistent_identifier(task_dict: dict, data: "CombineArchive") -> None:
+def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
     """
     Representation of celery task to evaluate an assessment.
     These celery tasks should be in the format:
@@ -34,13 +29,14 @@ def f1_model_persistent_identifier(task_dict: dict, data: "CombineArchive") -> N
     :return: None
     """
     print("Execution successfully called")
-    sleep(10)
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
 
-    if data.model.content.model.id:
+    if data["main_model_object"].get("id"):
+        print(f"Found model id {data['main_model_object'].get('id')}")
         result = "success"
     else:
+        print("No id was found in model")
         result = "failed"
 
     status = models.TaskStatusIn(status=models.TaskStatus(result))

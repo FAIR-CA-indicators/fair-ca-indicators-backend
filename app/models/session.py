@@ -109,6 +109,11 @@ class SessionSubjectIn(BaseModel):
                 raise ValueError("Url assessments need a url")
         return subject_type
 
+    def dict(self, **kwargs):
+        returned_dict = super().dict(**kwargs)
+        returned_dict["path"] = str(returned_dict["path"])
+        return returned_dict
+
 
 class Session(BaseModel):
     """
@@ -130,7 +135,9 @@ class Session(BaseModel):
 
     id: str
     session_subject: SessionSubjectIn
-    tasks: dict[str, Task] = {}  # NEVER SET DIRECTLY, USE self.add_task()
+    tasks: dict[
+        str, Union[AutomatedTask, Task]
+    ] = {}  # NEVER SET DIRECTLY, USE self.add_task()
     status: SessionStatus = SessionStatus.queued
     score_all_essential: float = 0
     score_all_nonessential: float = 0
@@ -177,9 +184,6 @@ class SessionHandler:
         self.session_model: Session = session
         self.indicator_tasks: dict = {}
         self.assessed_data: Optional["CombineArchive"] = None
-
-        if self.user_input.subject_type in [SubjectType.url, SubjectType.file]:
-            self.assessed_data = self.retrieve_data(self.user_input.path)
 
         if not session.tasks:
             if self.user_input.subject_type is not SubjectType.manual:
@@ -279,7 +283,7 @@ class SessionHandler:
             filename = self.download_model(path)
             path = f"app/session_files/{self.id}/{filename}"
 
-        return CombineArchive(path, file_is_archive=path.endswith(".omex"))
+        return CombineArchive(path, file_is_archive=str(path).endswith(".omex"))
 
     def download_model(self, url: str) -> None:
         # See what is possible here
@@ -525,7 +529,7 @@ class SessionHandler:
         task.disabled = default_disabled
 
         if isinstance(task, AutomatedTask) and not task.disabled:
-            task.do_evaluate(self.data)
+            task.do_evaluate(self.data.dict())
 
         return task
 

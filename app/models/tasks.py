@@ -1,14 +1,11 @@
 from pydantic import BaseModel, validator, root_validator
 from enum import Enum
-from typing import Optional, Dict, TYPE_CHECKING
+from typing import Optional, Dict
 from fastapi import HTTPException
 
 from app.metrics.assessments_lifespan import fair_indicators
 
 from app.celery import automated_tasks
-
-if TYPE_CHECKING:
-    from app.models import CombineArchive
 
 
 class TaskStatus(str, Enum):
@@ -264,25 +261,18 @@ class IndicatorDependency:
 
 
 class AutomatedTask(Task):
-    metric_path = "fair-test-example"
-    metric_version = "0.1.0"
-    title = "Example of FairTest implementation"
-    # description = """This indicator serves no purpose except being used as a template for other FairCombine tests"""
-    topics = ["data"]  # Needs to be standardised!
-    authors = "author-orcid"
-    test_test = {}  # Contains the urls towards records used for testing the metric
     task_method: str
     automated: bool = True
 
-    def do_evaluate(self, data: "CombineArchive"):
+    def do_evaluate(self, data: dict):
         if data is None or not data:
             raise HTTPException(status_code=422, detail="Provide data to evaluate")
 
         self.evaluate(data)
 
-    def evaluate(self, data: "CombineArchive"):
+    def evaluate(self, data: dict):
         self.status = TaskStatus.started
-        celery_task = getattr(automated_tasks.tasks, self.task_method)
+        celery_task = getattr(automated_tasks, self.task_method)
         if celery_task is None:
             raise ValueError(f"Task method {self.task_method} was not found")
 

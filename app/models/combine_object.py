@@ -1,3 +1,4 @@
+import json
 import libcombine
 import libsbml
 
@@ -8,6 +9,7 @@ class CombineArchive(libcombine.CombineArchive):
     def __init__(self, filename: str, file_is_archive: bool = True) -> None:
         super().__init__()
         self.is_from_archive = file_is_archive
+        self.path = filename
         if not file_is_archive:
             self.locations = []
 
@@ -57,11 +59,25 @@ class CombineArchive(libcombine.CombineArchive):
 
                     self.main_model_metadata = self.entries_metadata[str(loc)]
 
+    def dict(self):
+        return {
+            "path": self.path,
+            "locations": self.locations,
+            "main_model_object": self.main_model_object.dict(),
+            "main_model_location": self.main_model_location,
+            "main_model_metadata": self.main_model_metadata,
+        }
+
+    def json(self):
+        return json.dumps(self.dict())
+
 
 class CombineSbml:
     def __init__(self, filename: str):
         # Here just retrieve file content to build the CombineModel
         self.content = libsbml.readSBML(filename)
-        print(f"Model recovered from tempfile:\n{self.content.model.id}")
 
-        pass
+    def dict(self):
+        return {
+            "id": self.content.model.id,
+        }

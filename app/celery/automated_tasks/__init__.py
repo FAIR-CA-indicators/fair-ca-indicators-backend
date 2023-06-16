@@ -1,11 +1,5 @@
-from celery import Celery
-from . import tasks
+from .f1_model_persistent_identifier_task import f1_model_persistent_identifier
 
-__all__ = [tasks]
-
-# FIXME Need to load broker from settings
-celery_app = Celery(
-    "fair-combine",
-    broker="redis://localhost:6379/0",
-    include=["app.models.automated_tasks.tasks"],
-)
+__all__ = [
+    f1_model_persistent_identifier,
+]
