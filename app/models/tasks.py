@@ -1,11 +1,14 @@
 from pydantic import BaseModel, validator, root_validator
 from enum import Enum
-from typing import Optional, Dict
+from typing import Optional, Dict, TYPE_CHECKING
 from fastapi import HTTPException
 
 from app.metrics.assessments_lifespan import fair_indicators
 
 from app.celery import automated_tasks
+
+if TYPE_CHECKING:
+    from app.models import CombineArchive
 
 
 class TaskStatus(str, Enum):
@@ -271,14 +274,13 @@ class AutomatedTask(Task):
     task_method: str
     automated: bool = True
 
-    def do_evaluate(self, data: dict):
+    def do_evaluate(self, data: "CombineArchive"):
         if data is None or not data:
             raise HTTPException(status_code=422, detail="Provide data to evaluate")
 
         self.evaluate(data)
-        return self.status
 
-    def evaluate(self, data: dict):
+    def evaluate(self, data: "CombineArchive"):
         self.status = TaskStatus.started
         celery_task = getattr(automated_tasks.tasks, self.task_method)
         if celery_task is None:

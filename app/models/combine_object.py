@@ -28,9 +28,9 @@ class CombineArchive(libcombine.CombineArchive):
             self.locations = [str(loc) for loc in self.getAllLocations()]
             self.entries = {}
             self.entries_metadata = {}
-            self.model = None
-            self.model_location = None
-            self.model_metadata = None
+            self.main_model_object = None
+            self.main_model_location = None
+            self.main_model_metadata = None
 
             for i in range(self.getNumEntries()):
                 entry = self.getEntry(i)
@@ -43,7 +43,7 @@ class CombineArchive(libcombine.CombineArchive):
                 if (
                     loc.endswith(".xml")
                     and not loc.endswith("manifest.xml")
-                    and self.model is None
+                    and self.main_model_object is None
                 ):
                     # Here make tmp files to read for CombineModel and CombineMetada
                     with NamedTemporaryFile("w+") as file:
@@ -51,11 +51,11 @@ class CombineArchive(libcombine.CombineArchive):
                         file.write(content)
                         sbml_object = CombineSbml(file.name)
                         if sbml_object.content.model is not None:
-                            self.model = sbml_object
-                            self.model_location = str(loc)
+                            self.main_model_object = sbml_object
+                            self.main_model_location = str(loc)
                             break
 
-                    self.model_metadata = self.entries_metadata[str(loc)]
+                    self.main_model_metadata = self.entries_metadata[str(loc)]
 
 
 class CombineSbml:

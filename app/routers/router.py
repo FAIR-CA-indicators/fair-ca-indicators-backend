@@ -62,7 +62,7 @@ def create_session(
         finally:
             uploaded_file.file.close()
 
-    session_handler = SessionHandler.from_user_input(subject)
+    session_handler = SessionHandler.from_user_input(session_id, subject)
     try:
         redis_app.json().set(
             f"session:{session_handler.session_model.id}",

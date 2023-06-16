@@ -1,13 +1,17 @@
 import requests
 
+from typing import TYPE_CHECKING
 from time import sleep
 from app.celery.celery_app import app
 
 from ... import models
 
+if TYPE_CHECKING:
+    from ...models import CombineArchive
+
 
 @app.task
-def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
+def f1_model_persistent_identifier(task_dict: dict, data: "CombineArchive") -> None:
     """
     Representation of celery task to evaluate an assessment.
     These celery tasks should be in the format:
@@ -34,7 +38,7 @@ def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
 
-    if "id" in data:
+    if data.model.content.model.id:
         result = "success"
     else:
         result = "failed"

@@ -182,7 +182,8 @@ class SessionHandler:
             self.assessed_data = self.retrieve_data(self.user_input.path)
 
         if not session.tasks:
-            self.data = self.retrieve_metadata(self.user_input.path)
+            if self.user_input.subject_type is not SubjectType.manual:
+                self.data = self.retrieve_data(self.user_input.path)
             self.create_tasks()
 
         else:
