@@ -62,12 +62,18 @@ def create_session(
         finally:
             uploaded_file.file.close()
 
-    session_handler = SessionHandler.from_user_input(session_id, subject)
-    redis_app.json().set(
-        f"session:{session_handler.session_model.id}",
-        "$",
-        obj=session_handler.session_model.dict(),
-    )
+    session_handler = SessionHandler.from_user_input(subject)
+    try:
+        redis_app.json().set(
+            f"session:{session_handler.session_model.id}",
+            "$",
+            obj=session_handler.session_model.dict(),
+        )
+    except TypeError as e:
+        print(session_handler.session_model)
+        print(session_handler.session_model.dict())
+        raise e
+
     return session_handler.session_model
 
 

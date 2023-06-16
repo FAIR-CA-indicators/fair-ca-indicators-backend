@@ -12,6 +12,7 @@ from .tasks import (
     Indicator,
     TaskPriority,
     IndicatorDependency,
+    AutomatedTask,
 )
 from .combine_object import CombineArchive
 
@@ -28,4 +29,5 @@ __all__ = [
     SubjectType,
     IndicatorDependency,
     CombineArchive,
+    AutomatedTask,
 ]

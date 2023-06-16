@@ -1,5 +1,5 @@
 from uuid import uuid4
-from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator
+from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator, ValidationError
 from typing import Union, Optional
 from enum import Enum
 
@@ -7,12 +7,14 @@ from .tasks import (
     Task,
     TaskStatus,
     TaskPriority,
+    AutomatedTask,
     Indicator,
     IndicatorDependency,
     DependencyType,
 )
 from app.metrics.assessments_lifespan import fair_indicators
 from app.dependencies.settings import get_settings
+from app.redis_controller import redis_app
 from app.decorators import as_form
 
 # from app.importers import OmexImporter, ModelImporter
@@ -180,6 +182,7 @@ class SessionHandler:
             self.assessed_data = self.retrieve_data(self.user_input.path)
 
         if not session.tasks:
+            self.data = self.retrieve_metadata(self.user_input.path)
             self.create_tasks()
 
         else:
@@ -209,6 +212,40 @@ class SessionHandler:
         :param session: A pre-existing session
         :return: A SessionHandler object
         """
+        return cls(session)
+
+    @classmethod
+    def from_id(cls, session_id: str) -> "SessionHandler":
+        """
+        Creates a session handler for an existing session using that session identifier.
+
+        :param session_id: A pre-existing session identifier
+        :return: A SessionHandler object
+        """
+
+        def build_task(task_dict):
+            children = task_dict.pop("children")
+            if children:
+                children = {
+                    child_key: build_task(child_dict)
+                    for child_key, child_dict in children
+                }
+            try:
+                task = Task(**task_dict, children=children)
+                return task
+            except ValidationError as e:
+                raise ValueError(
+                    f"Failed to build task with name {task_dict['name']}: {str(e)}"
+                )
+
+        session_json = redis_app.json().get(f"session:{session_id}")
+        tasks = {
+            task_key: build_task(task_dict)
+            for task_key, task_dict in session_json.pop("tasks").items()
+        }
+
+        subject = session_json.pop("session_subject")
+        session = Session(**session_json, session_subject=subject, tasks=tasks)
         return cls(session)
 
     def _build_tasks_dict(self, tasks: list[Task]):
@@ -442,11 +479,25 @@ class SessionHandler:
         task_id = str(uuid4())
         config = get_settings()
 
-        task = Task(
-            id=task_id,
-            name=indicator.name,
-            priority=TaskPriority(indicator.priority),
-            session_id=self.id,
+        is_task_automated = (
+            self.user_input.subject_type is not SubjectType.manual
+            and indicator.name in config.automated_assessments
+        )
+        task = (
+            AutomatedTask(
+                id=task_id,
+                name=indicator.name,
+                priority=TaskPriority(indicator.priority),
+                session_id=self.id,
+                task_method=config.automated_assessments[indicator.name],
+            )
+            if is_task_automated
+            else Task(
+                id=task_id,
+                name=indicator.name,
+                priority=TaskPriority(indicator.priority),
+                session_id=self.id,
+            )
         )
 
         task_dependencies = config.assessment_dependencies.get(indicator.name)
@@ -471,6 +522,10 @@ class SessionHandler:
         if default_status != TaskStatus.queued:
             task.automated = True
         task.disabled = default_disabled
+
+        if isinstance(task, AutomatedTask) and not task.disabled:
+            task.do_evaluate(self.data)
+
         return task
 
     def update_task_children(self, task_key):

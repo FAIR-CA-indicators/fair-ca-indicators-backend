@@ -98,6 +98,10 @@ class Config(BaseSettings):
         "CA-RDA-R1.1-03MA": {"condition": "or", "indicators": ["CA-RDA-R1.1-01MA"]},
     }
 
+    automated_assessments: dict[str, str] = {
+        "CA-RDA-F1-01Model": "f1_model_persistent_identifier",
+    }
+
 
 class DevConfig(Config):
     allowed_origins: List[str] = ["*"]
