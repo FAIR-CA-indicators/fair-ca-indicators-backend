@@ -53,3 +53,4 @@ jobs:
           REDIS_URL: localhost
           REDIS_PORT: 6379
           FAIR_COMBINE_ENV: test
+          CELERY_SECRET_KEY: ${{ secrets.CELERY_SECRET_KEY }}
