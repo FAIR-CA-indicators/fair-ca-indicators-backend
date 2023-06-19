@@ -16,7 +16,9 @@ class Config(BaseSettings):
     celery_broker = os.environ.get(
         "CELERY_BROKER_URL", f"redis://{redis_url}:{redis_port}/{redis_db_number}"
     )
-    celery_key = "6ceba212-6e09-474b-a491-51df1a014214"  # KEEP HIDDEN
+    celery_key = os.environ.get("CELERY_SECRET_KEY")  # KEEP HIDDEN
+    if not celery_key:
+        raise ValueError("A secret key is necessary for celery to interact with the application")
 
     allowed_origins: List[str] = []
     # List of indicators that applied to archive (if no archive, their statuses will be set to 'failed')

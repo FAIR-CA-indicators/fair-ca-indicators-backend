@@ -3,3 +3,6 @@
 /redis_data/dump.rdb
 /app/test_main.http
 /.coverage
+/app/dependencies/settings.py
+/Dockerfile
+/.env

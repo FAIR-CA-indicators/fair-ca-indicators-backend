@@ -8,7 +8,10 @@ Requirements: python3.9, [redis](https://redis.io/)
 ```bash
 python -m pip install -r requirements.txt
 ```
-2. In another terminal, run Redis
+2. Copy the file `app/dependencies/settings.py.template` in `app/dependencies/settings.py`
+and modify the value of `CELERY_SECRET_KEY` inside (or set a value in your environment).
+
+3. In another terminal, run Redis
 ```bash
 redis-stack-server
 ```
@@ -30,7 +33,9 @@ Main page (`http://localhost:8000`) redirects towards the documentation in ReDoc
 ## Docker installation
 Requirements: Docker needs to be installed
 
-1. Run docker-compose
+1. Copy the `DockerFile.template` file and paste it as `DockerFile`, then add in the
+environment variables the environment variable `CELERY_SECRET_KEY` and give it a value.
+2. Run docker-compose
 ```bash
 docker-compose up -d
 ```
