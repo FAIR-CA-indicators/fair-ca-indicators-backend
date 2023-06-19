@@ -183,6 +183,9 @@ class SessionHandler:
 
         :param session: The session object to handle
         """
+        if session.id not in redis_app.locks:
+            redis_app.add_lock(session.id)
+
         self.id: str = session.id
         self.user_input: SessionSubjectIn = session.session_subject
         self.session_model: Session = session

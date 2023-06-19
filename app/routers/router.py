@@ -219,7 +219,7 @@ async def update_task(
     :param task_status: The new TaskStatus
     :return: The whole session.
     """
-    redis_app.lock.acquire(timeout=60)
+    redis_app.locks[session_id].acquire(timeout=60)
 
     session = session_details(session_id)
     handler = SessionHandler.from_existing_session(session)
@@ -230,7 +230,7 @@ async def update_task(
         task.disabled = False
 
     if task.disabled:
-        redis_app.lock.release()
+        redis_app.locks[session_id].release()
         raise HTTPException(
             status_code=403,
             detail="This task status was automatically set, changing its status is forbidden",
@@ -246,6 +246,6 @@ async def update_task(
         print(f"An error occurred in Redis: {str(e)}")
         raise HTTPException(status_code=404, detail="No task with this id was found")
     finally:
-        redis_app.lock.release()
+        redis_app.locks[session_id].release()
 
     return handler.session_model
