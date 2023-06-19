@@ -45,6 +45,12 @@ class TaskStatusIn(BaseModel):
     """
 
     status: TaskStatus
+    force_update: str = ""
+
+    class Config:
+        @staticmethod
+        def schema_extra(schema: dict) -> None:
+            schema["properties"].pop("force_update")
 
 
 class Task(BaseModel):

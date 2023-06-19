@@ -18,6 +18,7 @@ from app.models import (
 )
 from app.metrics.assessments_lifespan import fair_indicators
 from app.redis_controller import redis_app
+from app.dependencies.settings import get_settings
 
 base_router = APIRouter()
 
@@ -217,8 +218,10 @@ async def update_task(
     :param session_id: The id of the session the Task is associated with
     :param task_id: The identifier of the wanted Task
     :param task_status: The new TaskStatus
+    :param force: Force the task status update even if task is disabled
     :return: The whole session.
     """
+    config = get_settings()
     redis_app.locks[session_id].acquire(timeout=60)
 
     session = session_details(session_id)
@@ -226,15 +229,18 @@ async def update_task(
 
     task = handler.session_model.get_task(task_id)
 
-    if isinstance(task, AutomatedTask) and task_status.status != "queued":
-        task.disabled = False
-
-    if task.disabled:
+    if task.disabled and task_status.force_update != config.celery_key:
+        print(
+            f"Wrong key given ({task_status.force_update}). Expected {config.celery_key}"
+        )
         redis_app.locks[session_id].release()
         raise HTTPException(
             status_code=403,
             detail="This task status was automatically set, changing its status is forbidden",
         )
+
+    if isinstance(task, AutomatedTask):
+        task.disabled = False
     task.status = task_status.status
 
     handler.update_task_children(task_id)

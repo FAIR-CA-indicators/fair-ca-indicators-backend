@@ -1,4 +1,5 @@
 import os
+
 from functools import lru_cache
 from pydantic import BaseSettings
 from typing import List
@@ -15,6 +16,7 @@ class Config(BaseSettings):
     celery_broker = os.environ.get(
         "CELERY_BROKER_URL", f"redis://{redis_url}:{redis_port}/{redis_db_number}"
     )
+    celery_key = "6ceba212-6e09-474b-a491-51df1a014214"  # KEEP HIDDEN
 
     allowed_origins: List[str] = []
     # List of indicators that applied to archive (if no archive, their statuses will be set to 'failed')

@@ -18,7 +18,7 @@ def f4_model_metadata_harvestable(task_dict: dict, data: dict) -> None:
         # Code to get the final TaskStatus
         ...
 
-        status = models.TaskStatusIn(status=models.TaskStatus(result))
+        status = models.TaskStatusIn(status=models.TaskStatus(result), force_update=config.celery_key)
         requests.patch(
             f"http://localhost:8000/session/{session_id}/tasks/{task_id},
             json=status
@@ -40,7 +40,9 @@ def f4_model_metadata_harvestable(task_dict: dict, data: dict) -> None:
         print("No metadata found")
         result = "failed"
 
-    status = models.TaskStatusIn(status=models.TaskStatus(result))
+    status = models.TaskStatusIn(
+        status=models.TaskStatus(result), force_update=config.celery_key
+    )
 
     print(f"Task status computed: {result}")
     # Needs to send a request for the task to be updated
