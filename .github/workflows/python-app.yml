@@ -48,6 +48,7 @@ jobs:
           black --check --verbose -- . 
       - name: Test with pytest
         run: |
+          cp app/dependencies/settings.py.template app/dependencies/settings.py
           pytest
         env:
           REDIS_URL: localhost
