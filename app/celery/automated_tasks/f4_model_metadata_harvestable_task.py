@@ -34,8 +34,10 @@ def f4_model_metadata_harvestable(task_dict: dict, data: dict) -> None:
     task_id = task_dict["id"]
 
     if data["main_model_metadata"]:
+        print(f"Found metadata: {data['main_model_metadata']}")
         result = "success"
     else:
+        print("No metadata found")
         result = "failed"
 
     status = models.TaskStatusIn(status=models.TaskStatus(result))

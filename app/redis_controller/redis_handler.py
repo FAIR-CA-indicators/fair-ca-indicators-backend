@@ -1,12 +1,19 @@
 from redis import Redis
 from redis.exceptions import ConnectionError
+from threading import Lock
 
 from app.dependencies.settings import get_settings
 
 
+class RedisController(Redis):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.lock = Lock()
+
+
 def create_redis_app():
     config = get_settings()
-    redis_app = Redis(
+    redis_app = RedisController(
         host=config.redis_url,
         port=config.redis_port,
         db=config.redis_db_number,

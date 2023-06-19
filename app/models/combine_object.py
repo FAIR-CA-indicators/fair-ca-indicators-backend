@@ -90,4 +90,7 @@ class CombineSbmlMetadata:
 
     # TODO
     def dict(self):
-        return {"found": True}
+        if self.metadata:
+            return {"about": self.metadata.getAbout()}
+        else:
+            return {}

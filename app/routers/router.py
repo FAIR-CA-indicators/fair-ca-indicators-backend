@@ -195,7 +195,9 @@ def indicator_description(name: str) -> Indicator:
 
 
 @base_router.patch("/session/{session_id}/tasks/{task_id}", tags=["Tasks"])
-def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Session:
+async def update_task(
+    session_id: str, task_id: str, task_status: TaskStatusIn
+) -> Session:
     """
     Edit the status of a Task to the given TaskStatus and recalculate the
     default status for the children of that Task
@@ -214,6 +216,8 @@ def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Ses
     :param task_status: The new TaskStatus
     :return: The whole session.
     """
+    redis_app.lock.acquire()
+
     session = session_details(session_id)
     handler = SessionHandler.from_existing_session(session)
 
@@ -229,7 +233,10 @@ def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Ses
 
     try:
         redis_app.json().set(f"session:{session_id}", ".", handler.session_model.dict())
-    except ResponseError:
+    except ResponseError as e:
+        print(f"An error occurred in Redis: {str(e)}")
         raise HTTPException(status_code=404, detail="No task with this id was found")
+    finally:
+        redis_app.lock.release()
 
     return handler.session_model

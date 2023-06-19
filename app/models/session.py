@@ -534,7 +534,7 @@ class SessionHandler:
 
         return task
 
-    def update_task_children(self, task_key):
+    def update_task_children(self, task_key: str) -> None:
         """
         Update a Tasks children status.
         This method is called when a Task status is updated to propagate the change
@@ -544,6 +544,7 @@ class SessionHandler:
         :return: None
         """
         task = self.session_model.get_task(task_key)
+
         for child in task.children.values():
             default_status, default_disabled = self._get_default_task_status(child.name)
             child.status = default_status
