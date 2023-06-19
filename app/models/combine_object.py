@@ -19,7 +19,7 @@ class CombineArchive(libcombine.CombineArchive):
             try:
                 assert self.main_model_object.content.model is not None
             except AssertionError:
-                raise ValueError("The provided SBML file does not contain any model")
+                raise ValueError("An error occurred while parsing provided file")
 
             self.entries = {filename: self.main_model_object}
             self.entries_metadata = {}

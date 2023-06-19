@@ -12,6 +12,7 @@ from app.models import (
     SessionHandler,
     SubjectType,
     Task,
+    AutomatedTask,
     TaskStatusIn,
     Indicator,
 )
@@ -61,8 +62,10 @@ def create_session(
             subject.path = path
         finally:
             uploaded_file.file.close()
-
-    session_handler = SessionHandler.from_user_input(session_id, subject)
+    try:
+        session_handler = SessionHandler.from_user_input(session_id, subject)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
     try:
         redis_app.json().set(
             f"session:{session_handler.session_model.id}",
@@ -222,6 +225,10 @@ async def update_task(
     handler = SessionHandler.from_existing_session(session)
 
     task = handler.session_model.get_task(task_id)
+
+    if isinstance(task, AutomatedTask) and task_status.status != "queued":
+        task.disabled = False
+
     if task.disabled:
         redis_app.lock.release()
         raise HTTPException(
@@ -229,6 +236,7 @@ async def update_task(
             detail="This task status was automatically set, changing its status is forbidden",
         )
     task.status = task_status.status
+
     handler.update_task_children(task_id)
     handler.update_session_data()
 

@@ -530,7 +530,7 @@ class SessionHandler:
         task.status = default_status
         if default_status != TaskStatus.queued:
             task.automated = True
-        task.disabled = default_disabled
+        task.disabled = True if isinstance(task, AutomatedTask) else default_disabled
 
         return task
 
@@ -553,7 +553,7 @@ class SessionHandler:
     def start_automated_tasks(self):
         for task_id in self.indicator_tasks.values():
             task = self.session_model.get_task(task_id)
-            if isinstance(task, AutomatedTask) and not task.disabled:
+            if isinstance(task, AutomatedTask):
                 task.do_evaluate(self.data.dict())
 
     def json(self):
