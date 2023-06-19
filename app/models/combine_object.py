@@ -12,15 +12,16 @@ class CombineArchive(libcombine.CombineArchive):
         self.path = filename
         if not file_is_archive:
             self.locations = []
+            self.main_model_location = None
+            self.main_model_metadata = None
 
-            self.model = CombineSbml(filename)
+            self.main_model_object = CombineSbml(filename)
             try:
-                assert self.model.content.model is not None
+                assert self.main_model_object.content.model is not None
             except AssertionError:
                 raise ValueError("The provided SBML file does not contain any model")
 
-            self.model_metadata = None
-            self.entries = {filename: self.model}
+            self.entries = {filename: self.main_model_object}
             self.entries_metadata = {}
 
         else:
