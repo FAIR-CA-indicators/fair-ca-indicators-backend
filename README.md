@@ -33,11 +33,11 @@ Main page (`http://localhost:8000`) redirects towards the documentation in ReDoc
 ## Docker installation
 Requirements: Docker needs to be installed
 
-1. Copy the `DockerFile.template` file and paste it as `DockerFile`, then add in the
-environment variables the environment variable `CELERY_SECRET_KEY` and give it a value.
-2. Run docker-compose
+1. Copy the `DockerFile.template` file and paste it as `DockerFile`
+2. Add the environment variable `CELERY_SECRET_KEY` just below the declaration of `REDIS_PORT` and give it a value.
+3. Run docker-compose
 ```bash
-docker-compose up -d
+docker-compose up --build
 ```
 
 Endpoints are accessible at `http://localhost:8000`. 
