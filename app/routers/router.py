@@ -239,7 +239,13 @@ async def update_task(
             detail="This task status was automatically set, changing its status is forbidden",
         )
 
-    if isinstance(task, AutomatedTask):
+    # If query is not sent by celery, set the task as non-automated
+    if task_status.force_update != config.celery_key:
+        task.automated = False
+    # If AutomatedTask is updated by celery, it means the assessment is done and task can be enabled
+    if task_status.force_update == config.celery_key and isinstance(
+        task, AutomatedTask
+    ):
         task.disabled = False
     task.status = task_status.status
 
