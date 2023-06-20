@@ -533,7 +533,7 @@ class SessionHandler:
         task.status = default_status
         if default_status != TaskStatus.queued:
             task.automated = True
-        task.disabled = True if isinstance(task, AutomatedTask) else default_disabled
+        task.disabled = isinstance(task, AutomatedTask) or default_disabled
 
         return task
 

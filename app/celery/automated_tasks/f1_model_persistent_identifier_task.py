@@ -2,7 +2,27 @@ import requests
 
 from app.celery.celery_app import app
 from app.dependencies.settings import get_settings
+from urllib.parse import urlparse
 from ... import models
+
+
+def check_alt_ids(metadata: dict) -> bool:
+    accepted_persistents = [
+        "doi.org",
+        "purl.org",
+        "purl.oclc.org",
+        "purl.net",
+        "purl.com",
+        "identifiers.org",
+        "w3id.org",
+    ]
+
+    for resource_id in metadata["alt_ids"]:
+        resource_url = urlparse(resource_id)
+        if resource_url.netloc in accepted_persistents:
+            return True
+
+    return False
 
 
 @app.task
@@ -32,13 +52,16 @@ def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
     print("Execution successfully called")
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
-
-    if data["main_model_object"].get("id"):
-        print(f"Found model id {data['main_model_object'].get('id')}")
-        result = "success"
-    else:
-        print("No id was found in model")
-        result = "failed"
+    try:
+        if data["main_model_metadata"] and check_alt_ids(data["main_model_metadata"]):
+            print("Found persistent identifiers in model metadata")
+            result = "success"
+        else:
+            print("No persistent identifier was found for model")
+            result = "failed"
+    except Exception as e:
+        print(f"An error occurred while assessing task: {str(e)}")
+        result = "error"
 
     print(config.celery_key)
     status = models.TaskStatusIn(

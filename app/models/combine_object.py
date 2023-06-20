@@ -13,9 +13,9 @@ class CombineArchive(libcombine.CombineArchive):
         if not file_is_archive:
             self.locations = []
             self.main_model_location = None
-            self.main_model_metadata = None
 
             self.main_model_object = CombineSbml(filename)
+
             try:
                 assert self.main_model_object.content.model is not None
             except AssertionError:
@@ -23,6 +23,7 @@ class CombineArchive(libcombine.CombineArchive):
 
             self.entries = {filename: self.main_model_object}
             self.entries_metadata = {}
+            self.main_model_metadata = CombineModelMetadata(self.main_model_object)
 
         else:
             if not self.initializeFromArchive(filename):
@@ -48,7 +49,7 @@ class CombineArchive(libcombine.CombineArchive):
                     and not loc.endswith("manifest.xml")
                     and self.main_model_object is None
                 ):
-                    # Here make tmp files to read for CombineModel and CombineMetada
+                    # Here make tmp files to read for CombineModel and CombineMetadata
                     with NamedTemporaryFile("w+") as file:
                         content = self.extractEntryToString(entry.getLocation())
                         file.write(content)
@@ -56,7 +57,9 @@ class CombineArchive(libcombine.CombineArchive):
                         if sbml_object.content.model is not None:
                             self.main_model_object = sbml_object
                             self.main_model_location = str(loc)
-                            self.main_model_metadata = self.entries_metadata[str(loc)]
+                            self.main_model_metadata = CombineModelMetadata(
+                                self.main_model_object
+                            )
                             break
 
     def dict(self):
@@ -65,7 +68,7 @@ class CombineArchive(libcombine.CombineArchive):
             "locations": self.locations,
             "main_model_object": self.main_model_object.dict(),
             "main_model_location": self.main_model_location,
-            "main_model_metadata": CombineSbmlMetadata(self.main_model_metadata).dict(),
+            "main_model_metadata": self.main_model_metadata.dict(),
         }
 
     def json(self):
@@ -83,14 +86,54 @@ class CombineSbml:
         }
 
 
-class CombineSbmlMetadata:
+class CombineModelMetadata:
     # TODO
-    def __init__(self, omex_description: libcombine.OmexDescription):
-        self.metadata = omex_description or None
+    def __init__(self, model_object: CombineSbml):
+        self.content = (
+            model_object.content.model.getAnnotation()
+            if model_object.content.model.isSetAnnotation()
+            else None
+        )
+
+        self.taxa = []
+        self.properties = []
+        self.versions = []
+        self.alt_ids = []
+
+        description = None
+        for i in range(self.content.getNumChildren()):
+            child = self.content.getChild(i)
+            if child.getName() == "RDF":
+                for j in range(child.getNumChildren()):
+                    rdf_child = child.getChild(j)
+                    if rdf_child.getName() == "Description":
+                        description = rdf_child
+                        break
+                if description is not None:
+                    break
+
+        if description is None:
+            return
+
+        for i in range(description.getNumChildren()):
+            child = description.getChild(i)
+            if child.getName() == "hasProperty":
+                self.properties.append(child.getAttrValue(0))
+            if child.getName() == "hasTaxons":
+                self.taxa.append(child.getAttrValue(0))
+            if child.getName() == "is":
+                bag = child.getChild(0)
+                for j in range(bag.getNumChildren()):
+                    self.alt_ids.append(bag.getChild(0).getAttrValue(0))
 
     # TODO
     def dict(self):
-        if self.metadata:
-            return {"about": self.metadata.getAbout()}
+        if self.content:
+            return {
+                "alt_ids": self.alt_ids,
+                "versions": self.versions,
+                "properties": self.properties,
+                "taxa": self.taxa,
+            }
         else:
             return {}
