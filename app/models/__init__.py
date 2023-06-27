@@ -14,7 +14,7 @@ from .tasks import (
     IndicatorDependency,
     AutomatedTask,
 )
-from .combine_object import CombineArchive
+from .combine_object import CombineArchive, CombineArchiveException
 
 __all__ = [
     Task,
@@ -29,5 +29,6 @@ __all__ = [
     SubjectType,
     IndicatorDependency,
     CombineArchive,
+    CombineArchiveException,
     AutomatedTask,
 ]
