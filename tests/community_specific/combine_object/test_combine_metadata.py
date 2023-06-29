@@ -18,17 +18,12 @@ def compare_metadata(expected, found):
             assert found[key] == expected_value, f"{key} should contain the same values"
 
 
-# TODO: Test the following files
-#   - Ai2021PhysiomeS000013.omex
-#   - case_01.omex
-#   - Elowitz_Leibler_2000.omex
-#   - SMC_excitation_contraction.omex
-
-
 @pytest.mark.parametrize(
     "filename, is_archive",
     [
         ("tests/data/omex/CombineArchiveShowCase.omex", True),
+        ("tests/data/omex/case_01.omex", True),
+        ("tests/data/omex/Elowitz_Leibler_2000.omex", True),
         ("tests/data/sed-ml/zhao2013_fig3a-user.sedx", True),
         ("tests/data/sbml/BIOMD0000000144.xml", False),
         ("tests/data/sbml/BIOMD0000000640_url.xml", False),
@@ -73,6 +68,31 @@ def test_model_metadata_from_omex(filename, is_archive):
             ],
             "cell_locations": ["http://identifiers.org/taxonomy/7215"],
             "citations": ["http://identifiers.org/pubmed/17667953"],
+        },
+        "tests/data/omex/case_01.omex": {
+            "taxa": [],
+            "properties": [],
+            "alt_ids": [],
+            "versions": [],
+            "creators": [],
+            "creation_date": "",
+            "modification_dates": [],
+            "cell_locations": [],
+            "citations": [],
+        },
+        "tests/data/omex/Elowitz_Leibler_2000.omex": {
+            "taxa": [],
+            "properties": [],
+            "alt_ids": [],
+            "versions": [],
+            "creators": ["Jeelean Lim"],
+            "creation_date": "2009-04-02T00:00:00+00:00",
+            "modification_dates": [
+                "2009-04-30T12:38:21+12:00",
+                "2009-04-28T11:49:59+12:00",
+            ],
+            "cell_locations": [],
+            "citations": [],
         },
         "tests/data/sed-ml/zhao2013_fig3a-user.sedx": {
             "creation_date": "2013-01-01T00:00:00Z",
@@ -216,3 +236,16 @@ def test_copasi_metadata():
     assert "COPASI files are not yet handled by the FairCombine assessment tool" in str(
         exc.value
     )
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "tests/data/omex/Ai2021PhysiomeS000013.omex",
+        "tests/data/omex/SMC_excitation_contraction.omex",
+    ],
+)
+def test_no_master_file_in_manifest(filename):
+    with pytest.raises(CombineArchiveException) as exc:
+        CombineArchive(filename)
+    assert "No master file was defined in provided archive manifest" in str(exc.value)
