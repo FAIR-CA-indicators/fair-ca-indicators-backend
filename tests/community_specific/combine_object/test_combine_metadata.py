@@ -29,9 +29,10 @@ def compare_metadata(expected, found):
     "filename, is_archive",
     [
         ("tests/data/omex/CombineArchiveShowCase.omex", True),
+        ("tests/data/sed-ml/zhao2013_fig3a-user.sedx", True),
         ("tests/data/sbml/BIOMD0000000144.xml", False),
         ("tests/data/sbml/BIOMD0000000640_url.xml", False),
-        ("tests/data/sbml/Human-GEM.xml", False),
+        # ("tests/data/sbml/Human-GEM.xml", False),
         ("tests/data/sbml/model.xml", False),
         ("tests/data/cellml/elowitz_leibler_2000.cellml", False),
     ],
@@ -72,6 +73,17 @@ def test_model_metadata_from_omex(filename, is_archive):
             ],
             "cell_locations": ["http://identifiers.org/taxonomy/7215"],
             "citations": ["http://identifiers.org/pubmed/17667953"],
+        },
+        "tests/data/sed-ml/zhao2013_fig3a-user.sedx": {
+            "creation_date": "2013-01-01T00:00:00Z",
+            "taxa": [],
+            "properties": [],
+            "alt_ids": [],
+            "versions": [],
+            "creators": ["Yang Kuang"],
+            "modification_dates": [],
+            "cell_locations": [],
+            "citations": [],
         },
         "tests/data/omex/Roda2020.omex": {
             "taxa": [

@@ -6,6 +6,8 @@ from tempfile import NamedTemporaryFile
 from app.parsers import (
     SbmlModel,
     SbmlModelMetadata,
+    SedmlModel,
+    SedmlModelMetadata,
     CellMLModel,
     CellMLModelMetadata,
     RDFMetadata,
@@ -27,7 +29,7 @@ class CombineArchive(libcombine.CombineArchive):
         "xml": {"model": SbmlModel, "meta": SbmlModelMetadata},
         "sbml": {"model": SbmlModel, "meta": SbmlModelMetadata},
         "cellml": {"model": CellMLModel, "meta": CellMLModelMetadata},
-        "sedml": {},  # FIXME
+        "sedml": {"model": SedmlModel, "meta": SedmlModelMetadata},
         "rdf": {"meta": RDFMetadata},
     }
 

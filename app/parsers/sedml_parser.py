@@ -1,4 +1,4 @@
-import libsbml
+import libsedml
 import logging
 
 from defusedxml import ElementTree as ET
@@ -19,7 +19,7 @@ class SedMLParsingException(Exception):
 class SedmlModel(ModelObject):
     def __init__(self, filename: str):
         # Here just retrieve file content to build the CombineModel
-        self.content = libsbml.readSBML(filename)
+        self.content = libsedml.readSedML(filename)
         if self.content.getNumErrors() > 0 and self.content.model is None:
             error_log = [
                 f"{self.content.getError(i).getMessage()}\n"
@@ -49,13 +49,12 @@ class SedmlModelMetadata(ModelMetadata):
     def __init__(self, filename: str):
         super().__init__()
         tree = ET.parse(filename)
-        model = tree.find("./{*}model")
+        model = tree.find("./{*}listOfModels/{*}model")
         self._id = model.attrib["id"]
 
-        content = model.find("./{*}annotation")
-        document_ref = URIRef(f"#{model.attrib['metaid']}")
-
-        all_metadata = content.findall(".//{*}RDF")
+        # FIXME: May not work for files other than the example
+        document_ref = URIRef(f"#{self._id}")
+        all_metadata = tree.findall(".//{*}RDF")
 
         for rdf_tree in all_metadata:
             graph = Graph().parse(data=ET.tostring(rdf_tree), format="xml")
