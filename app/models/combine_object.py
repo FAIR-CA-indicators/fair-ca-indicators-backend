@@ -80,8 +80,8 @@ class CombineArchive(libcombine.CombineArchive):
             self.main_model_metadata = None
             # If archive contained a metadata.rdf file, we read metadata from there
             if self.hasMetadataForLocation(main_file_location):
-                print("Found a .rdf file! Getting metadata from there")
                 with NamedTemporaryFile("w+") as tmp_meta_file:
+                    # FIXME: !!! THE EXPORTED METADATA IS NOT THE SAME AS THE CONTENT OF `metadata.rdf`!!!
                     content = self.getMetadataForLocation(main_file_location).toXML()
                     tmp_meta_file.write(content)
                     tmp_meta_file.seek(0)
@@ -94,16 +94,14 @@ class CombineArchive(libcombine.CombineArchive):
                 tmp_file.write(content)
                 tmp_file.seek(0)
                 self.main_model_object = parser["model"](tmp_file.name)
-                self.main_model_location = main_file.getLocation()
+                self.main_model_location = main_file_location
                 # If no metadata was found previously, try to find some in the model itself
                 additional_metadata = parser["meta"](tmp_file.name)
                 if self.main_model_metadata is None:
-                    print("No model metadata currently stored")
                     self.main_model_metadata = additional_metadata
                 else:
-                    print("Adding model metadata to currently stored values")
                     print(
-                        f"Currently found creators: {self.main_model_metadata.creators}"
+                        f"Currently found modif dates: {self.main_model_metadata.modification_dates}"
                     )
                     self.main_model_metadata.add_internal_metadata(additional_metadata)
 

@@ -1,6 +1,6 @@
 import logging
 
-from rdflib import Graph, URIRef, DCTERMS, DC
+from rdflib import Graph, URIRef, DCTERMS
 from libcellml import Parser
 from defusedxml import ElementTree as ET
 
@@ -52,6 +52,10 @@ class CellMLModel(ModelObject):
 
 
 class CellMLModelMetadata(ModelMetadata):
+    CELLML_MODICATION_DATE_REF = URIRef(
+        "http://www.cellml.org/metadata/1.0#modification"
+    )
+
     def __init__(self, filename):
         super().__init__()
 
@@ -80,78 +84,14 @@ class CellMLModelMetadata(ModelMetadata):
                 continue
             self.metadata.append(tree)
             self.rdf_graphs.append(graph)
+            self.parse_metadata_graph(graph, document_ref)
 
-            # Loading creators
-            creator_triples = list(
-                graph.triples((document_ref, DC.creator, None))
-            ) + list(graph.triples((document_ref, DCTERMS.creator, None)))
-
-            for subject, predicate, target in creator_triples:
-                creator_name_id = graph.value(target, self.CREATOR_NAME_2006_REF)
-                if creator_name_id is None:
-                    creator_name_id = graph.value(target, self.CREATOR_NAME_2001_REF)
-                    fullname = (
-                        f"{graph.value(creator_name_id, self.CREATOR_GIVEN_NAME_2001_REF)} "
-                        f"{graph.value(creator_name_id, self.CREATOR_FAMILY_NAME_2001_REF)}"
-                    )
-                    if fullname != "None None":
-                        self._creators.add(fullname)
-                else:
-                    fullname = (
-                        f"{graph.value(creator_name_id, self.CREATOR_GIVEN_NAME_2006_REF)} "
-                        f"{graph.value(creator_name_id, self.CREATOR_FAMILY_NAME_2006_REF)}"
-                    )
-                    if fullname != "None None":
-                        self._creators.add(fullname)
-
-            # Loading creation date
-            creation_date_id = graph.value(document_ref, DCTERMS.created, None)
-            creation_date = graph.value(creation_date_id, DCTERMS.W3CDTF)
-            if not self._creation_date and self._creation_date != creation_date:
-                logger.warning(
-                    "Multiple creation dates were found. Keeping the last occurring one"
-                )
-            self._creation_date = creation_date
-
-            # Loading modification dates
-            for subject, predicate, target in graph.triples(
-                (document_ref, self.MODIFICATION_DATE_REF, None)
-            ):
-                modified_ref = graph.value(target, DCTERMS.modified)
-                date = graph.value(modified_ref, DCTERMS.W3CDTF)
-                self._modification_dates.add(date)
-
-            # Loading alternative ids
-            # FIXME
-
-            # Loading model versions
-            # FIXME
-
-            # Loading model properties
-            # FIXME
-
-            # Loading taxa
-            # FIXME
-
-            # Loading cell locations
-            # FIXME
-
-            # Loading citations
-            # FIXME
+    def extract_modification_dates(self, graph: Graph, model_uri: URIRef):
+        for triple in graph.triples((model_uri, self.CELLML_MODICATION_DATE_REF, None)):
+            modified_ref = graph.value(triple[2], DCTERMS.modified)
+            date = graph.value(modified_ref, DCTERMS.W3CDTF)
+            self._modification_dates.add(date)
 
     @property
     def id(self):
         return self._id
-
-    def dict(self):
-        return {
-            "alt_ids": self.alt_ids,
-            "versions": self.versions,
-            "properties": self.properties,
-            "taxa": self.taxa,
-            "creators": self.creators,
-            "creation_date": self.creation_date,
-            "modification_dates": self.modification_dates,
-            "cell_locations": self.cell_locations,
-            "citations": self.citations,
-        }

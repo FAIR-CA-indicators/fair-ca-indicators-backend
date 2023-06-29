@@ -11,9 +11,11 @@ def compare_metadata(expected, found):
             assert len(found_value) == len(
                 expected_value
             ), f"Found {key} should have {len(expected_value)} entries"
-            assert sorted(found_value) == sorted(expected_value)
+            assert sorted(found_value) == sorted(
+                expected_value
+            ), f"{key} should contain the same values"
         else:
-            assert found[key] == expected_value
+            assert found[key] == expected_value, f"{key} should contain the same values"
 
 
 # TODO: Test the following files
