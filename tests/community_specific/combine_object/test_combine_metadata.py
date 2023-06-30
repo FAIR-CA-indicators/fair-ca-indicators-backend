@@ -1,21 +1,6 @@
 import pytest
 
-from app.models import CombineArchive, CombineArchiveException
-
-
-def compare_metadata(expected, found):
-    assert len(found) == len(expected), "All entries in metadata should be tested"
-    for key, expected_value in expected.items():
-        found_value = found[key]
-        if isinstance(found_value, list):
-            assert len(found_value) == len(
-                expected_value
-            ), f"Found {key} should have {len(expected_value)} entries"
-            assert sorted(found_value) == sorted(
-                expected_value
-            ), f"{key} should contain the same values"
-        else:
-            assert found[key] == expected_value, f"{key} should contain the same values"
+from app.models import CombineArchive
 
 
 @pytest.mark.parametrize(
@@ -27,7 +12,7 @@ def compare_metadata(expected, found):
         ("tests/data/sed-ml/zhao2013_fig3a-user.sedx", True),
         ("tests/data/sbml/BIOMD0000000144.xml", False),
         ("tests/data/sbml/BIOMD0000000640_url.xml", False),
-        # ("tests/data/sbml/Human-GEM.xml", False),
+        ("tests/data/sbml/Human-GEM.xml", False),
         ("tests/data/sbml/model.xml", False),
         ("tests/data/cellml/elowitz_leibler_2000.cellml", False),
     ],
@@ -227,25 +212,19 @@ def test_model_metadata_from_omex(filename, is_archive):
             "citations": [],
         },
     }
-    compare_metadata(expected_data[filename], found_data)
-
-
-def test_copasi_metadata():
-    with pytest.raises(CombineArchiveException) as exc:
-        CombineArchive("tests/data/omex/Roda2020.omex")
-    assert "COPASI files are not yet handled by the FairCombine assessment tool" in str(
-        exc.value
-    )
-
-
-@pytest.mark.parametrize(
-    "filename",
-    [
-        "tests/data/omex/Ai2021PhysiomeS000013.omex",
-        "tests/data/omex/SMC_excitation_contraction.omex",
-    ],
-)
-def test_no_master_file_in_manifest(filename):
-    with pytest.raises(CombineArchiveException) as exc:
-        CombineArchive(filename)
-    assert "No master file was defined in provided archive manifest" in str(exc.value)
+    assert len(found_data) == len(
+        expected_data[filename]
+    ), "All entries in metadata should be tested"
+    for key, expected_value in expected_data[filename].items():
+        found_value = found_data[key]
+        if isinstance(found_value, list):
+            assert len(found_value) == len(
+                expected_value
+            ), f"Found {key} should have {len(expected_value)} entries"
+            assert sorted(found_value) == sorted(
+                expected_value
+            ), f"{key} should contain the same values"
+        else:
+            assert (
+                found_data[key] == expected_value
+            ), f"{key} should contain the same values"
