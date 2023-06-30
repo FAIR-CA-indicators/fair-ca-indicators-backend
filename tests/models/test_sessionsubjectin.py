@@ -57,10 +57,9 @@ def test_session_subject_in_validation_manual(missing):
         SessionSubjectIn(**json_data)
 
 
-@pytest.mark.parametrize("subject", ["url", "file"])
-def test_session_subject_in_validation_urlfile(subject):
+def test_session_subject_in_validation_url():
     json_data = {
-        "subject_type": subject,
+        "subject_type": "url",
         "path": "http://test-example.com",
     }
 

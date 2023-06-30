@@ -1,17 +1,33 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+import uuid
+import os
+from shutil import copyfileobj
+from fastapi import APIRouter, HTTPException, UploadFile, Depends
+from typing import List, Optional
 from redis.exceptions import ResponseError
 
-from app.models.session import Session, SessionSubjectIn, SessionHandler, SubjectType
-from app.models.tasks import Task, TaskStatusIn, Indicator
+
+from app.models import (
+    Session,
+    SessionSubjectIn,
+    SessionHandler,
+    SubjectType,
+    Task,
+    AutomatedTask,
+    TaskStatusIn,
+    Indicator,
+)
 from app.metrics.assessments_lifespan import fair_indicators
 from app.redis_controller import redis_app
+from app.dependencies.settings import get_settings
 
 base_router = APIRouter()
 
 
 @base_router.post("/session", tags=["Sessions"])
-def create_session(subject: SessionSubjectIn) -> Session:
+def create_session(
+    subject: SessionSubjectIn = Depends(SessionSubjectIn.as_form),
+    uploaded_file: Optional[UploadFile] = None,
+) -> Session:
     """
     Create a new session based on user input
 
@@ -23,19 +39,45 @@ def create_session(subject: SessionSubjectIn) -> Session:
     The created session
     \f
     :param subject: Pydantic model containing user input.
+    :param uploaded_file: If subject type is 'file', this contains the uploaded omex archive.
     :return: The created session
     """
-    if subject.subject_type is not SubjectType.manual:
+    session_id = str(uuid.uuid4())
+    if subject.subject_type is SubjectType.url:
         raise HTTPException(
             501, "The api only supports manual assessments at the moment"
         )
-    session_handler = SessionHandler.from_user_input(subject)
+    elif subject.subject_type is SubjectType.file:
+        if uploaded_file is None:
+            raise HTTPException(
+                422, "No file was uploaded for assessment. Impossible to process query"
+            )
 
-    redis_app.json().set(
-        f"session:{session_handler.session_model.id}",
-        "$",
-        obj=session_handler.session_model.dict(),
-    )
+        # Loading file
+        try:
+            # This is wrong path, file should be moved to the session directory
+            path = f"./session_files/{session_id}/{uploaded_file.filename}"
+            os.makedirs(f"./session_files/{session_id}")
+            with open(path, "wb") as buffer:
+                copyfileobj(uploaded_file.file, buffer)
+            subject.path = path
+        finally:
+            uploaded_file.file.close()
+    try:
+        session_handler = SessionHandler.from_user_input(session_id, subject)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    try:
+        redis_app.json().set(
+            f"session:{session_handler.session_model.id}",
+            "$",
+            obj=session_handler.session_model.dict(),
+        )
+        session_handler.start_automated_tasks()
+    except TypeError as e:
+        print(session_handler.session_model)
+        print(session_handler.session_model.dict())
+        raise e
 
     return session_handler.session_model
 
@@ -157,7 +199,9 @@ def indicator_description(name: str) -> Indicator:
 
 
 @base_router.patch("/session/{session_id}/tasks/{task_id}", tags=["Tasks"])
-def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Session:
+async def update_task(
+    session_id: str, task_id: str, task_status: TaskStatusIn
+) -> Session:
     """
     Edit the status of a Task to the given TaskStatus and recalculate the
     default status for the children of that Task
@@ -174,24 +218,46 @@ def update_task(session_id: str, task_id: str, task_status: TaskStatusIn) -> Ses
     :param session_id: The id of the session the Task is associated with
     :param task_id: The identifier of the wanted Task
     :param task_status: The new TaskStatus
+    :param force: Force the task status update even if task is disabled
     :return: The whole session.
     """
+    config = get_settings()
+    redis_app.locks[session_id].acquire(timeout=60)
+
     session = session_details(session_id)
     handler = SessionHandler.from_existing_session(session)
 
     task = handler.session_model.get_task(task_id)
-    if task.disabled:
+
+    if task.disabled and task_status.force_update != config.celery_key:
+        print(
+            f"Wrong key given ({task_status.force_update}). Expected {config.celery_key}"
+        )
+        redis_app.locks[session_id].release()
         raise HTTPException(
             status_code=403,
             detail="This task status was automatically set, changing its status is forbidden",
         )
+
+    # If query is not sent by celery, set the task as non-automated
+    if task_status.force_update != config.celery_key:
+        task.automated = False
+    # If AutomatedTask is updated by celery, it means the assessment is done and task can be enabled
+    if task_status.force_update == config.celery_key and isinstance(
+        task, AutomatedTask
+    ):
+        task.disabled = False
     task.status = task_status.status
+
     handler.update_task_children(task_id)
     handler.update_session_data()
 
     try:
         redis_app.json().set(f"session:{session_id}", ".", handler.session_model.dict())
-    except ResponseError:
+    except ResponseError as e:
+        print(f"An error occurred in Redis: {str(e)}")
         raise HTTPException(status_code=404, detail="No task with this id was found")
+    finally:
+        redis_app.locks[session_id].release()
 
     return handler.session_model

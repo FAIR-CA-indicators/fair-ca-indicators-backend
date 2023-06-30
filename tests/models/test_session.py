@@ -51,7 +51,8 @@ def test_session_get_missing_task():
 
 def test_session_handler_from_user_input():
     user_input = ManualSessionSubjectFactory()
-    sh = SessionHandler.from_user_input(user_input)
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
     assert isinstance(sh, SessionHandler)
     assert isinstance(sh.session_model, Session)
     assert sh.session_model.status == SessionStatus.queued
@@ -228,7 +229,8 @@ def test_session_handler_create_tasks():
     indicators = indicators[1:]  # Dropping column name
 
     user_input = ManualSessionSubjectFactory()
-    sh = SessionHandler.from_user_input(user_input)
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
     assert sh.session_model.tasks != {}
 
     for indicator in indicators:
@@ -240,7 +242,8 @@ def test_session_handler_create_tasks():
 def test_session_handler_update_task_children():
     # FIXME: Dependency choice is specific, we should test all of them at some point
     user_input = ManualSessionSubjectFactory(has_archive=True)
-    sh = SessionHandler.from_user_input(user_input)
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
 
     parent_name = "CA-RDA-I3-01Archive"
     parent_id = sh.get_task_from_indicator(parent_name)
