@@ -18,13 +18,11 @@ class CombineArchiveException(Exception):
     pass
 
 
-# TODO:
-#   - Find a way to select the main model file, it is not clearcut
-#   - Add parsers for cellml and sed-ml files
-#   - These parsers have to output the data and metadata in the same formats
-#   - If archive contains multiple models, either use the 'master' one (written in manifest.xml), or raise an error
-#       and set all model related tasks to manual
 class CombineArchive(libcombine.CombineArchive):
+    """
+    Class to represent a Combine archive in memory
+    """
+
     PARSERS = {
         "xml": {"model": SbmlModel, "meta": SbmlModelMetadata},
         "sbml": {"model": SbmlModel, "meta": SbmlModelMetadata},
