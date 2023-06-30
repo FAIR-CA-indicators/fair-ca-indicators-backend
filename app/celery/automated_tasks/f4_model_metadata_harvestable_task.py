@@ -1,12 +1,20 @@
 import requests
 
+from typing import Optional
+
 from app.celery.celery_app import app
 from app.dependencies.settings import get_settings
 from ... import models
 
 
+def dict_non_empty(metadata: dict):
+    return any([bool(x) for x in metadata.values()])
+
+
 @app.task
-def f4_model_metadata_harvestable(task_dict: dict, data: dict) -> None:
+def f4_model_metadata_harvestable(
+    task_dict: dict, data: dict, test: bool = False
+) -> Optional["models.TaskStatus"]:
     """
     Representation of celery task to evaluate an assessment.
     These celery tasks should be in the format:
@@ -33,7 +41,7 @@ def f4_model_metadata_harvestable(task_dict: dict, data: dict) -> None:
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
 
-    if data["main_model_metadata"]:
+    if dict_non_empty(data["main_model_metadata"]):
         print(f"Found metadata: {data['main_model_metadata']}")
         result = "success"
     else:
@@ -45,13 +53,16 @@ def f4_model_metadata_harvestable(task_dict: dict, data: dict) -> None:
     )
 
     print(f"Task status computed: {result}")
-    # Needs to send a request for the task to be updated
-    url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
-    print(f"Patching {url}")
-    requests.patch(
-        url,
-        json=status.dict(),
-    )
+    if test:
+        return models.TaskStatus(result)
+    else:
+        # Needs to send a request for the task to be updated
+        url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
+        print(f"Patching {url}")
+        requests.patch(
+            url,
+            json=status.dict(),
+        )
 
     # Does not work because celery does not have access to fair_indicators
     # routers.update_task(session_id, task_id, status)

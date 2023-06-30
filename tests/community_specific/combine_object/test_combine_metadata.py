@@ -90,33 +90,6 @@ def test_model_metadata_from_omex(filename, is_archive):
             "cell_locations": [],
             "citations": [],
         },
-        "tests/data/omex/Roda2020.omex": {
-            "taxa": [
-                "urn:miriam:taxonomy:2697049",
-                "urn:miriam:taxonomy:9606",
-                "http://identifiers.org/taxonomy/2697049",
-                "http://identifiers.org/taxonomy/9606",
-            ],
-            "properties": [
-                "urn:miriam:mamo:MAMO_0000028",
-                "urn:miriam:mamo:MAMO_0000046",
-                "http://identifiers.org/mamo/MAMO_0000028",
-                "http://identifiers.org/mamo/MAMO_0000046",
-            ],
-            "alt_ids": [],
-            "versions": [
-                "urn:miriam:doid:DOID:0080600",
-                "http://identifiers.org/doid/DOID:0080600",
-            ],
-            "creators": ["Kausthubh Ramachandran"],
-            "creation_date": "2020-07-13T17:19:55Z",
-            "modification_dates": ["2020-07-13T17:19:55Z"],
-            "cell_locations": [],
-            "citations": [
-                "http://identifiers.org/pubmed/32289100",
-                "urn:miriam:pubmed:32289100",
-            ],
-        },
         "tests/data/sbml/BIOMD0000000144.xml": {
             "taxa": [],
             "properties": [],

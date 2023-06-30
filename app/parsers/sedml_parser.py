@@ -35,11 +35,11 @@ class SedmlModel(ModelObject):
 
     @property
     def id(self):
-        return self.content.model.id
+        return self.content.getModel(0).id
 
     def dict(self):
         return {
-            "id": self.content.model.id,
+            "id": self.id,
         }
 
 

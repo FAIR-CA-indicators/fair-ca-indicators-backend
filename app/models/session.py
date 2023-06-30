@@ -17,7 +17,6 @@ from app.dependencies.settings import get_settings
 from app.redis_controller import redis_app
 from app.decorators import as_form
 
-# from app.importers import OmexImporter, ModelImporter
 from .combine_object import CombineArchive
 
 
@@ -194,7 +193,7 @@ class SessionHandler:
 
         if not session.tasks:
             if self.user_input.subject_type is not SubjectType.manual:
-                self.data = self.retrieve_data(self.user_input.path)
+                self.assessed_data = self.retrieve_data(self.user_input.path)
             self.create_tasks()
 
         else:
@@ -281,7 +280,6 @@ class SessionHandler:
 
     def retrieve_data(self, path: str) -> CombineArchive:
         """
-        TODO: Method to retrieve the archive and models for url and file type assessments
         :param path: Either a url link or the file PATH towards a Omex archive or model file
         :return: A CombineArchive object. This will be empty except for the model data if
             the provided file is not a Omex archive
@@ -289,15 +287,13 @@ class SessionHandler:
         if self.user_input.subject_type is SubjectType.url:
             filename = self.download_model(path)
             path = f"app/session_files/{self.id}/{filename}"
+        is_archive = str(path).endswith(".omex") or str(path).endswith(".sedx")
+        return CombineArchive(path, file_is_archive=is_archive)
 
-        return CombineArchive(path, file_is_archive=str(path).endswith(".omex"))
-
-    def download_model(self, url: str) -> None:
-        # See what is possible here
+    def download_model(self, url: str) -> str:
+        # TODO: Needs to download the model from the given url
         pass
 
-    # FIXME: Does not work. Does not take children into account
-    #   We need to automatically update a session status once a task status is updated
     def is_running(self) -> bool:
         """Checks whether the session is still running or not"""
         all_tasks = [
@@ -554,10 +550,11 @@ class SessionHandler:
             child.disabled = default_disabled
 
     def start_automated_tasks(self):
+        """Starts the assessment of automated tasks"""
         for task_id in self.indicator_tasks.values():
             task = self.session_model.get_task(task_id)
             if isinstance(task, AutomatedTask):
-                task.do_evaluate(self.data.dict())
+                task.do_evaluate(self.assessed_data.dict())
 
     def json(self):
         """Returns the json representation of the session model"""

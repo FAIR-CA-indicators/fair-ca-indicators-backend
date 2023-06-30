@@ -469,7 +469,7 @@ class ModelMetadata(ModelObject, ABC):
 
         return resources
 
-    def dict(self):
+    def dict(self) -> dict:
         return {
             "alt_ids": self.alt_ids,
             "versions": self.versions,

@@ -1,5 +1,6 @@
 import factory
 import tempfile
+import logging
 
 from uuid import uuid4
 
@@ -10,6 +11,8 @@ from app.models import (
     TaskPriority,
     Indicator,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ManualSessionSubjectFactory(factory.Factory):
@@ -43,10 +46,14 @@ class FileSessionSubjectFactory(factory.Factory):
     subject_type = "file"
 
     # FIXME: The tmp file is not deleted after use
-    @factory.lazy_attribute
-    def path(self):
-        tmp = tempfile.NamedTemporaryFile("r", delete=False)
-        return tmp.name
+    @factory.post_generation
+    def path(obj, create, extracted):
+        if not create:
+            return
+        filename = extracted or tempfile.NamedTemporaryFile("r", delete=False).name
+        obj.path = filename
+        logger.warning(f"Setting session path to {filename}")
+        return filename
 
 
 class SessionFactory(factory.Factory):

@@ -1,5 +1,7 @@
 import requests
 
+from typing import Optional
+
 from app.celery.celery_app import app
 from app.dependencies.settings import get_settings
 from urllib.parse import urlparse
@@ -26,7 +28,9 @@ def check_alt_ids(metadata: dict) -> bool:
 
 
 @app.task
-def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
+def f1_model_persistent_identifier(
+    task_dict: dict, data: dict, test: bool = False
+) -> Optional["models.TaskStatus"]:
     """
     Representation of celery task to evaluate an assessment.
     These celery tasks should be in the format:
@@ -70,12 +74,15 @@ def f1_model_persistent_identifier(task_dict: dict, data: dict) -> None:
 
     print(f"Task status computed: {result}")
     # Needs to send a request for the task to be updated
-    url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
-    print(f"Patching {url}")
-    requests.patch(
-        url,
-        json=status.dict(),
-    )
+    if test:
+        return models.TaskStatus(result)
+    else:
+        url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
+        print(f"Patching {url}")
+        requests.patch(
+            url,
+            json=status.dict(),
+        )
 
     # Does not work because celery does not have access to fair_indicators
     # routers.update_task(session_id, task_id, status)
