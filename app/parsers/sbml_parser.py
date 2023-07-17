@@ -46,7 +46,6 @@ class SbmlModel(ModelObject):
 # TODO: Should provide an abstract metadata class that is inherited by
 #   the metadata for cellml, sed-ml and sbml files
 class SbmlModelMetadata(ModelMetadata):
-
     # TODO The parsing of the annotation needs to handle a lot of possible terms
     #   These are not implemented yet, but will need to be in the future
     #   All terms used are defined at the following locations:
