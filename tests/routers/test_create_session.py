@@ -9,8 +9,9 @@ from tests.factories import ManualSessionSubjectFactory
 def test_create_session_manual_session(test_client, redis_client):
     user_input = ManualSessionSubjectFactory()
     input_json = user_input.dict()
+    input_json["subject_type"] = input_json["subject_type"].value
 
-    res = test_client.post("/session", json=input_json)
+    res = test_client.post("/session", data=input_json)
     assert res.status_code == 200
     session_data = res.json()
     # FIXME: Is there a way to get redis running in test env?
@@ -36,8 +37,9 @@ def test_create_repository_based_session(repo, test_client, redis_client):
     }[repo]
 
     input_json = user_input.dict()
+    input_json["subject_type"] = input_json["subject_type"].value
 
-    res = test_client.post("/session", json=input_json)
+    res = test_client.post("/session", data=input_json)
     assert res.status_code == 200
 
     s = Session(**res.json())
