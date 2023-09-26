@@ -4,7 +4,10 @@
 
 Requirements: python3.9, [redis](https://redis.io/)
 
-1. Install the requirements
+Redis stack server can be installed by following the [official documentation](https://redis.io/docs/getting-started/install-stack/)
+
+
+1. Install the python dependencies
 ```bash
 python -m pip install -r requirements.txt
 ```
@@ -15,11 +18,11 @@ and modify the value of `CELERY_SECRET_KEY` inside (or set a value in your envir
 ```bash
 redis-stack-server
 ```
-3. Run the local server:
+4. Run the local server:
 ```bash
 uvicorn app.main:app --reload
 ```
-4. (Optional) If you want the automated assessments to work, you need a celery worker running.
+5. (Optional) If you want the automated assessments to work, you need a celery worker running.
 The option `-l INFO` can be added at the end of the line to increase the log level to INFO
 ```bash
 celery -A app.celery.celery_app worker
@@ -45,6 +48,16 @@ Endpoints are accessible at `http://localhost:8000`.
 If you have redis-cli or RedisInsight installed, the redis endpoint can be accessed at `http://localhost:6379` 
 
 This docker container also includes an image for the celery worker.
+
+
+# Common issues
+
+- **Docker cannot access port 8000**: The port may be used by another application, 
+change the value of the port in the file `docker-compose.yml` and try to build the container 
+again.
+- **A secret key is necessary for celery to interact with the application**: 
+You probably forgot to setup a secret key for your application. Please refer to the second step of
+the relevant installation section (Local or Docker) of this README.
 
 # Testing
 
