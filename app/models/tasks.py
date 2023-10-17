@@ -1,8 +1,11 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, root_validator
 from enum import Enum
 from typing import Optional, Dict
+from fastapi import HTTPException
 
 from app.metrics.assessments_lifespan import fair_indicators
+
+from app.celery import automated_tasks
 
 
 class TaskStatus(str, Enum):
@@ -18,6 +21,7 @@ class TaskStatus(str, Enum):
     - *not_applicable*: The assessment is not applicable to the model/archive
     - *not_answered*: In self-assessments, the user refused to answer the question
     """
+
     queued = "queued"
     started = "started"
     success = "success"  # Children tasks should be answerable
@@ -39,7 +43,14 @@ class TaskStatusIn(BaseModel):
     Pydantic model for user to submit a status when editing a Task (see route
     `update_task`)
     """
+
     status: TaskStatus
+    force_update: str = ""
+
+    class Config:
+        @staticmethod
+        def schema_extra(schema: dict) -> None:
+            schema["properties"].pop("force_update")
 
 
 class Task(BaseModel):
@@ -57,6 +68,7 @@ class Task(BaseModel):
     - *disabled*: True if the Task status cannot be edited by user. False otherwise
     - *score*: 1 if Task status is **success**, 0 if **failed**, 0.5 if **warnings**, null otherwise.
     """
+
     id: str
     name: str
     session_id: str  # Needs a validator (https://docs.pydantic.dev/usage/validators/)? This must be a valid id
@@ -65,11 +77,18 @@ class Task(BaseModel):
     status: TaskStatus = TaskStatus.queued
     comment: str = ""
     disabled: bool = False
+    automated: bool = False
 
     score: float = 0
 
-    @validator("score", pre=True, always=True)
-    def make_score(cls, _, values: dict) -> float:
+    class Config:
+        validate_assignment = True
+
+    def add_task(self, child: "Task"):
+        self.children.update({child.id: child})
+
+    @root_validator
+    def make_score(cls, values: dict) -> dict:
         """
         Calculate the score based on the Task status. This erases possible user
         input in case someone would cheat.
@@ -80,11 +99,12 @@ class Task(BaseModel):
         """
         # Necessary to check for status as fields failing validation are not included in values
         if "status" in values:
-            return {
+            values["score"] = {
                 TaskStatus.success.value: 1,
                 TaskStatus.failed.value: 0,
                 TaskStatus.warnings.value: 0.5,
-            }.get(values['status'], 0)
+            }.get(values["status"], 0)
+            return values
         else:
             raise ValueError("Task status is required to calculate a score")
 
@@ -97,7 +117,7 @@ class Task(BaseModel):
         :return: The valid assessment name
         """
         if name not in fair_indicators:
-            raise ValueError("Given assessment name is not a known indicator")
+            raise ValueError(f"Given assessment name {name} is not a known indicator")
         return name
 
     def get_task_child(self, child_id: str) -> Optional["Task"]:
@@ -124,10 +144,11 @@ class Task(BaseModel):
         not applicable, or not answered. True otherwise
         """
         return (
-            self.status != "success"
-            and self.status != "warning"
-            and self.status != "not_applicable"
-            and self.status != "not_answered"
+            self.status != TaskStatus.success
+            and self.status != TaskStatus.warnings
+            and self.status != TaskStatus.not_applicable
+            and self.status != TaskStatus.not_answered
+            and self.status != TaskStatus.error
         )
 
 
@@ -143,6 +164,7 @@ class Indicator(BaseModel):
     - *short*: A short description of the assessment
     - *description*: A in-depth description of the assessment
     """
+
     name: str
     group: str
     sub_group: str
@@ -170,6 +192,7 @@ class IndicatorDependency:
             disabled and its status is automatically set at `failed` if both
             `indicator2` AND `indicator3` are failed (DepedencyType.or_)
     """
+
     def __init__(self, dependencies: list[str], operation: DependencyType = "or"):
         if len(dependencies) != len(set(dependencies)):
             raise ValueError("List of dependencies contains duplicates")
@@ -187,19 +210,25 @@ class IndicatorDependency:
         """
         indicators = [d.name for d in dependencies]
         if len(indicators) != len(set(indicators)):
-            raise ValueError("Tasks given in dependencies contains duplicate assessments")
+            raise ValueError(
+                "Tasks given in dependencies contains duplicate assessments"
+            )
 
         if len(indicators) != len(self.dependencies):
-            raise ValueError(f"Length of dependencies in parameters ({len(indicators)} is different than length of indicators given at initialization ({len(self.dependencies)}")
+            raise ValueError(
+                f"Length of dependencies in parameters ({len(indicators)} is different than length of indicators given "
+                f"at initialization ({len(self.dependencies)}"
+            )
 
         indicators = set(indicators)
         if any([d not in indicators for d in self.dependencies]):
-            raise ValueError(f"Some dependencies defined at initialisation are missing")
+            raise ValueError("Some dependencies defined at initialisation are missing")
 
     def is_automatically_failed(self, dependencies: list["Task"]) -> bool:
         """
         Checks if the Task should be automatically failed based on it dependencies
-        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised with)
+        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised
+            with)
         Step2: Applies the dependencies combination to determine whether task should be automatically failed
         If dependency is `or`, Task is automatically failed if any dependency is failed.
         If dependency is `and`, Task is automatically failed if all dependencies are failed.
@@ -212,14 +241,15 @@ class IndicatorDependency:
         self._check_task_dependencies(dependencies)
 
         if self.operation is DependencyType.or_:
-            return any([d.status == "failed" for d in dependencies])
+            return any([d.status == TaskStatus.failed for d in dependencies])
         if self.operation is DependencyType.and_:
-            return all([d.status == "failed" for d in dependencies])
+            return all([d.status == TaskStatus.failed for d in dependencies])
 
     def is_automatically_disabled(self, dependencies: list["Task"]) -> bool:
         """
         Checks if a Task should be automatically disabled based on it dependencies
-        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised with)
+        Step1: Checks that dependencies contain all correct indicators (no more no less than what it was initialised
+            with)
         Step2: Applies the dependencies combination to determine whether task should be automatically disabled
         If dependency type is `or`, Task is disabled if any dependency has not passed yet
         If dependency type is `and`, Task is disabled if no dependency has passed
@@ -235,3 +265,21 @@ class IndicatorDependency:
         elif self.operation is DependencyType.and_:
             return all([d.is_running_or_failed() for d in dependencies])
 
+
+class AutomatedTask(Task):
+    task_method: str
+    automated: bool = True
+
+    def do_evaluate(self, data: dict):
+        if data is None or not data:
+            raise HTTPException(status_code=422, detail="Provide data to evaluate")
+
+        self.evaluate(data)
+
+    def evaluate(self, data: dict):
+        self.status = TaskStatus.started
+        celery_task = getattr(automated_tasks, self.task_method)
+        if celery_task is None:
+            raise ValueError(f"Task method {self.task_method} was not found")
+
+        celery_task.delay(self.dict(), data)

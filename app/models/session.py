@@ -1,5 +1,5 @@
 from uuid import uuid4
-from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator
+from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator, ValidationError
 from typing import Union, Optional
 from enum import Enum
 
@@ -7,12 +7,17 @@ from .tasks import (
     Task,
     TaskStatus,
     TaskPriority,
+    AutomatedTask,
     Indicator,
     IndicatorDependency,
-    DependencyType
+    DependencyType,
 )
 from app.metrics.assessments_lifespan import fair_indicators
 from app.dependencies.settings import get_settings
+from app.redis_controller import redis_app
+from app.decorators import as_form
+
+from .combine_object import CombineArchive
 
 
 class SessionStatus(str, Enum):
@@ -26,6 +31,7 @@ class SessionStatus(str, Enum):
     - *finished*: Everything is done
     - *error*: An error occurred while running
     """
+
     queued = "queued"
     preprocessing = "preprocessing"
     running = "running"
@@ -41,28 +47,36 @@ class SubjectType(str, Enum):
     - *file*: The archive/model file is directly provided by the user
     - *manual*: No file is provided, the user will assess themselves the archive/model
     """
+
     url = "url"
     file = "file"
     manual = "manual"
 
 
+@as_form
 class SessionSubjectIn(BaseModel):
     """
     Data input necessary to create a session object.
 
     - *path*: The PATH towards the resource (not required if *subject_type* is **manual**)
-    - *has_archive*: Whether the assessed resource contains an archive (required attribute if *subject_type* is **manual**)
+    - *has_archive*: Whether the assessed resource contains an archive (required attribute if *subject_type*
+        is **manual**)
     - *has_model*: Whether the assessed resource contains a model (required attribute if *subject_type* is **manual**)
-    - *has_archive_metadata*: Whether the assessed resource has metadata regarding the archive (required attribute if *subject_type* is **manual**)
-    - *is_model_standard*: Whether the assessed model is in standard format (CellML, SBML, ...; required attribute if *subject_type* is **manual**)
-    - *is_archive_standard*: Whether the assessed archive is in OMEX format (required attribute if *subject_type* is **manual**)
+    - *has_archive_metadata*: Whether the assessed resource has metadata regarding the archive (required attribute if
+        *subject_type* is **manual**)
+    - *is_model_standard*: Whether the assessed model is in standard format (CellML, SBML, ...; required attribute if
+        *subject_type* is **manual**)
+    - *is_archive_standard*: Whether the assessed archive is in OMEX format (required attribute if *subject_type* is
+        **manual**)
     - *is_model_metadata_standard*:
-    - *is_archive_metadata_standard*: Whether the OMEX archive contains a manifest.xml file (required attribute if *subject_type* is **manual**)
+    - *is_archive_metadata_standard*: Whether the OMEX archive contains a manifest.xml file (required attribute if
+        *subject_type* is **manual**)
     - *is_biomodel*: Whether the model comes from BioModel (required attribute if *subject_type* is **manual**)
     - *is_pmr*: Whether the model comes from PMR (required attribute if *subject_type* is **manual**)
     - *subject_type*: See SubjectType model
     """
-    path: Union[HttpUrl, FileUrl, FilePath] = None
+
+    path: Union[HttpUrl, FileUrl, FilePath, None] = None
     has_archive: Optional[bool]
     has_model: Optional[bool]
     has_archive_metadata: Optional[bool]
@@ -89,11 +103,16 @@ class SessionSubjectIn(BaseModel):
                 or values.get("is_biomodel") is None
             ):
                 raise ValueError("Self-assessments needs the form filled")
-        else:
+        elif subject_type is SubjectType.url:
             if values.get("path") is None:
-                raise ValueError("Url and file assessments need a url or path respectively")
+                raise ValueError("Url assessments need a url")
         return subject_type
 
+    def dict(self, **kwargs):
+        returned_dict = super().dict(**kwargs)
+        if returned_dict.get("path") is not None:
+            returned_dict["path"] = str(returned_dict["path"])
+        return returned_dict
 
 
 class Session(BaseModel):
@@ -113,17 +132,20 @@ class Session(BaseModel):
     - *score_applicable_all*: Identical to *score_all*, excluding non-applicable Tasks
     - *ratio_not_applicable*: Percentage of assessments that do not apply to the evaluated resource
     """
+
     id: str
     session_subject: SessionSubjectIn
-    tasks: dict[str, Task] = {}
+    tasks: dict[
+        str, Union[AutomatedTask, Task]
+    ] = {}  # NEVER SET DIRECTLY, USE self.add_task()
     status: SessionStatus = SessionStatus.queued
-    score_all_essential: Optional[float]
-    score_all_nonessential: Optional[float]
-    score_all: Optional[float]
-    score_applicable_essential: Optional[float]
-    score_applicable_nonessential: Optional[float]
-    score_applicable_all: Optional[float]
-    ratio_not_applicable: Optional[float]
+    score_all_essential: float = 0
+    score_all_nonessential: float = 0
+    score_all: float = 0
+    score_applicable_essential: float = 0
+    score_applicable_nonessential: float = 0
+    score_applicable_all: float = 0
+    ratio_not_applicable: float = 0
 
     def get_task(self, task_id: str) -> Task:
         if task_id in self.tasks:
@@ -134,12 +156,24 @@ class Session(BaseModel):
             if tmp is not None:
                 return tmp
 
+    def add_task(self, task: Task, parent_id: Optional[str] = None):
+        if parent_id is not None:
+            parent = self.get_task(parent_id)
+            parent.add_task(task)
+        else:
+            self.tasks.update({task.id: task})
+
+
 # TODO: Document methods
 class SessionHandler:
     """
     The class to handle a session object. This class creates the task and their status
     based on user input, calculates the scores, ...
     """
+
+    # TODO:
+    #   Do not run the tasks until the starting point is saved in redis!
+
     def __init__(self, session: Session) -> None:
         """
         Creates the handler based on a session. This session can already exist
@@ -148,27 +182,36 @@ class SessionHandler:
 
         :param session: The session object to handle
         """
-        self.id = session.id
-        self.user_input = session.session_subject
-        self.session_model = session
-        self.indicator_tasks = {}
+        if session.id not in redis_app.locks:
+            redis_app.add_lock(session.id)
+
+        self.id: str = session.id
+        self.user_input: SessionSubjectIn = session.session_subject
+        self.session_model: Session = session
+        self.indicator_tasks: dict = {}
+        self.assessed_data: Optional["CombineArchive"] = None
 
         if not session.tasks:
+            if self.user_input.subject_type is not SubjectType.manual:
+                self.assessed_data = self.retrieve_data(self.user_input.path)
             self.create_tasks()
 
         else:
-            self.build_tasks_dict(list(self.session_model.tasks.values()))
+            self._build_tasks_dict(list(self.session_model.tasks.values()))
 
     @classmethod
-    def from_user_input(cls, session_data: SessionSubjectIn) -> "SessionHandler":
+    def from_user_input(
+        cls, session_id: str, session_data: SessionSubjectIn
+    ) -> "SessionHandler":
         """
         Creates a session based on user input (for example from the route `create_session`)
         and returns the handler for this session
 
+        :param session_id: The session identifier that will be used
         :param session_data:
         :return: A SessionHandler object
         """
-        session = Session(id=str(uuid4()), session_subject=session_data)
+        session = Session(id=session_id, session_subject=session_data)
         return cls(session)
 
     @classmethod
@@ -182,7 +225,41 @@ class SessionHandler:
         """
         return cls(session)
 
-    def build_tasks_dict(self, tasks: list[Task]):
+    @classmethod
+    def from_id(cls, session_id: str) -> "SessionHandler":
+        """
+        Creates a session handler for an existing session using that session identifier.
+
+        :param session_id: A pre-existing session identifier
+        :return: A SessionHandler object
+        """
+
+        def build_task(task_dict):
+            children = task_dict.pop("children")
+            if children:
+                children = {
+                    child_key: build_task(child_dict)
+                    for child_key, child_dict in children
+                }
+            try:
+                task = Task(**task_dict, children=children)
+                return task
+            except ValidationError as e:
+                raise ValueError(
+                    f"Failed to build task with name {task_dict['name']}: {str(e)}"
+                )
+
+        session_json = redis_app.json().get(f"session:{session_id}")
+        tasks = {
+            task_key: build_task(task_dict)
+            for task_key, task_dict in session_json.pop("tasks").items()
+        }
+
+        subject = session_json.pop("session_subject")
+        session = Session(**session_json, session_subject=subject, tasks=tasks)
+        return cls(session)
+
+    def _build_tasks_dict(self, tasks: list[Task]):
         """
         Creates the dictionary mapping all indicators names to their corresponding
         Task id in the Session object.
@@ -193,28 +270,42 @@ class SessionHandler:
         for task in tasks:
             # FIXME: Will fail when encountering task with multiple parent
             if task.name in self.indicator_tasks:
-                raise ValueError(f"Multiple tasks with the same name ({task.name}) found")
+                raise ValueError(
+                    f"Multiple tasks with the same name ({task.name}) found"
+                )
 
             self.indicator_tasks.update({task.name: task.id})
             if task.children:
-                self.build_tasks_dict(list(task.children.values()))
+                self._build_tasks_dict(list(task.children.values()))
 
-    def retrieve_metadata(self, url: str) -> None:
+    def retrieve_data(self, path: str) -> CombineArchive:
         """
-        TODO: Method to retrieve the archive and models for url and file type assessments
-        :param url:
-        :return:
+        :param path: Either a url link or the file PATH towards a Omex archive or model file
+        :return: A CombineArchive object. This will be empty except for the model data if
+            the provided file is not a Omex archive
         """
-        # See what is possible here
+        if self.user_input.subject_type is SubjectType.url:
+            filename = self.download_model(path)
+            path = f"app/session_files/{self.id}/{filename}"
+        is_archive = str(path).endswith(".omex") or str(path).endswith(".sedx")
+        return CombineArchive(path, file_is_archive=is_archive)
+
+    def download_model(self, url: str) -> str:
+        # TODO: Needs to download the model from the given url
         pass
 
     def is_running(self) -> bool:
         """Checks whether the session is still running or not"""
-        return any([
-            task.status is TaskStatus.queued
-            or task.status is TaskStatus.started
-            for task in self.session_model.tasks.values()
-        ])
+        all_tasks = [
+            self.session_model.get_task(task_id)
+            for task_id in self.indicator_tasks.values()
+        ]
+        return any(
+            [
+                task.status is TaskStatus.queued or task.status is TaskStatus.started
+                for task in all_tasks
+            ]
+        )
 
     def update_session_data(self):
         """
@@ -224,7 +315,10 @@ class SessionHandler:
         if not self.is_running():
             self.session_model.status = SessionStatus.finished
 
-        all_tasks = [self.session_model.get_task(task_key) for task_key in self.indicator_tasks.values()]
+        all_tasks = [
+            self.session_model.get_task(task_key)
+            for task_key in self.indicator_tasks.values()
+        ]
         count_all_essential = 0
         count_all_nonessential = 0
         count_applicable_essential = 0
@@ -268,23 +362,52 @@ class SessionHandler:
                 else:
                     count_na += 1
 
-        self.session_model.score_all = passed_all / len(all_tasks)
+        self.session_model.score_all = (
+            0 if len(all_tasks) == 0 else passed_all / len(all_tasks)
+        )
 
-        self.session_model.score_applicable_all = passed_applicable_all / count_applicable_all
-        self.session_model.score_applicable_essential = passed_applicable_essential / count_applicable_essential
-        self.session_model.score_applicable_nonessential = passed_applicable_nonessential / count_applicable_nonessential
+        self.session_model.score_applicable_all = (
+            0
+            if count_applicable_all == 0
+            else passed_applicable_all / count_applicable_all
+        )
 
-        self.session_model.score_all_essential = passed_all_essential / count_all_essential
-        self.session_model.score_all_nonessential = passed_all_nonessential / count_all_nonessential
+        self.session_model.score_applicable_essential = (
+            0
+            if count_applicable_essential == 0
+            else passed_applicable_essential / count_applicable_essential
+        )
 
-        self.session_model.ratio_not_applicable = count_na / len(all_tasks)
+        self.session_model.score_applicable_nonessential = (
+            0
+            if count_applicable_nonessential == 0
+            else passed_applicable_nonessential / count_applicable_nonessential
+        )
+
+        self.session_model.score_all_essential = (
+            0
+            if count_all_essential == 0
+            else passed_all_essential / count_all_essential
+        )
+
+        self.session_model.score_all_nonessential = (
+            0
+            if count_all_nonessential == 0
+            else passed_all_nonessential / count_all_nonessential
+        )
+
+        self.session_model.ratio_not_applicable = (
+            0 if len(all_tasks) == 0 else count_na / len(all_tasks)
+        )
 
     def get_task_from_indicator(self, indicator: str):
         """Returns the Task in Session associated with an indicator"""
-        return self.indicator_tasks[indicator] if indicator in self.indicator_tasks else None
+        return (
+            self.indicator_tasks[indicator]
+            if indicator in self.indicator_tasks
+            else None
+        )
 
-    # TODO: Test that this work even if children are created before parents
-    # TODO: Test that the default statuses are correctly set
     def create_tasks(self):
         """
         Creates all the tasks for the session based on existing fair_indicators
@@ -315,11 +438,10 @@ class SessionHandler:
         """
         config = get_settings()
         if (
-            indicator in config.archive_indicators
-            and not self.user_input.has_archive
+            indicator in config.archive_indicators and not self.user_input.has_archive
         ) or (
             indicator in config.archive_metadata_indicators
-             and not self.user_input.has_archive_metadata
+            and not self.user_input.has_archive_metadata
         ):
             return TaskStatus.failed, True
 
@@ -329,10 +451,7 @@ class SessionHandler:
         ):
             return TaskStatus(config.biomodel_assessment_status[indicator]), True
 
-        if (
-            indicator in config.pmr_indicator_status
-            and self.user_input.is_pmr
-        ):
+        if indicator in config.pmr_indicator_status and self.user_input.is_pmr:
             return TaskStatus(config.pmr_assessment_status[indicator]), True
 
         if indicator in config.assessment_dependencies:
@@ -341,7 +460,10 @@ class SessionHandler:
 
             dependency = IndicatorDependency(dependency_dict["indicators"], condition)
             parent_assessments = dependency.dependencies
-            tasks = [self.session_model.get_task(self.get_task_from_indicator(a)) for a in parent_assessments]
+            tasks = [
+                self.session_model.get_task(self.get_task_from_indicator(a))
+                for a in parent_assessments
+            ]
             if dependency.is_automatically_failed(tasks):
                 return TaskStatus.failed, True
             elif dependency.is_automatically_disabled(tasks):
@@ -365,11 +487,25 @@ class SessionHandler:
         task_id = str(uuid4())
         config = get_settings()
 
-        task = Task(
-            id=task_id,
-            name=indicator.name,
-            priority=TaskPriority(indicator.priority),
-            session_id=self.id,
+        is_task_automated = (
+            self.user_input.subject_type is not SubjectType.manual
+            and indicator.name in config.automated_assessments
+        )
+        task = (
+            AutomatedTask(
+                id=task_id,
+                name=indicator.name,
+                priority=TaskPriority(indicator.priority),
+                session_id=self.id,
+                task_method=config.automated_assessments[indicator.name],
+            )
+            if is_task_automated
+            else Task(
+                id=task_id,
+                name=indicator.name,
+                priority=TaskPriority(indicator.priority),
+                session_id=self.id,
+            )
         )
 
         task_dependencies = config.assessment_dependencies.get(indicator.name)
@@ -379,23 +515,25 @@ class SessionHandler:
                 # FIXME: This will cause issues if a Task has multiple parents
                 if parent_indicator in self.indicator_tasks:
                     parent_key = self.get_task_from_indicator(parent_indicator)
-                    parent_task = self.session_model.get_task(parent_key)
-                    parent_task.children[task_id] = task
+                    self.session_model.add_task(task, parent_key)
 
                 else:
                     parent_task = self._create_task(parent_indicator)
                     self.indicator_tasks[parent_indicator] = parent_task.id
-                    parent_task.children[task_id] = task
+                    self.session_model.add_task(task, parent_task.id)
 
         else:
-            self.session_model.tasks[task_id] = task
+            self.session_model.add_task(task)
 
         default_status, default_disabled = self._get_default_task_status(indicator.name)
         task.status = default_status
-        task.disabled = default_disabled
+        if default_status != TaskStatus.queued:
+            task.automated = True
+        task.disabled = isinstance(task, AutomatedTask) or default_disabled
+
         return task
 
-    def update_task_children(self, task_key):
+    def update_task_children(self, task_key: str) -> None:
         """
         Update a Tasks children status.
         This method is called when a Task status is updated to propagate the change
@@ -405,11 +543,22 @@ class SessionHandler:
         :return: None
         """
         task = self.session_model.get_task(task_key)
+
         for child in task.children.values():
             default_status, default_disabled = self._get_default_task_status(child.name)
             child.status = default_status
             child.disabled = default_disabled
 
+    def start_automated_tasks(self):
+        """Starts the assessment of automated tasks"""
+        for task_id in self.indicator_tasks.values():
+            task = self.session_model.get_task(task_id)
+            if isinstance(task, AutomatedTask):
+                task.do_evaluate(self.assessed_data.dict())
+
     def json(self):
         """Returns the json representation of the session model"""
         return self.session_model.json()
+
+    def dict(self):
+        return self.session_model.dict()
