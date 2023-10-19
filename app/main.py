@@ -3,6 +3,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers.router import base_router
+from app.routers.csh_router import csh_router
 from app.metrics.assessments_lifespan import get_tasks_definitions
 from app.dependencies.settings import get_settings
 
@@ -49,6 +50,7 @@ app = FastAPI(
     lifespan=get_tasks_definitions,
 )
 app.include_router(base_router)
+app.include_router(csh_router)
 
 config = get_settings()
 origins = config.allowed_origins

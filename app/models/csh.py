@@ -1,20 +1,58 @@
-# identifier exists [resource -> resource identifier]
+import re
+from pydantic import BaseModel
 
-def evaluate(json_data, schema_version):
-    if(schema_version == "3.1"):
-        current_pos = check_route(json_data, ["resource", "resource_identifier"])
+class Score(BaseModel):
+    overall: int =0
+    F: int = 0
+    A: int = 0
+    I: int = 0
+    R: int = 0
 
-    print(current_pos)
+class study_evaluation: 
+    def __init__(self,json_data, schema):
+        print("TEWESTTS")
+        self.schema = schema
+        self.metadata = json_data
+        self.score = Score()
+        
+    
 
 
-def check_route(json_data, route_keys):
-    current_position = json_data
+    def evaluate(self):
+        print("the schema is: ")
+        print(self.schema)
+        if(self.schema == "3.1"):
+            ###### here will be the list of assessments for schema 3.1
+            #check identifier
+            #
+            identifier = self.check_route(["resource", "resource_identifier"])
+            self.score.F += self.check_identifier(identifier)
 
-    for key in route_keys:
-        if key in current_position:
-            current_position = current_position[key]
-        else:
-            #if a key is missing return false
-            return False
-    #if the route exists return the value
-    return current_position
+            ######
+        print(self.score)
+        return self.score 
+
+    def check_route(self, route_keys):
+        current_position = self.metadata
+
+        for key in route_keys:
+            if key in current_position:
+                current_position = current_position[key]
+            else:
+                #if a key is missing return false
+                return False
+        #if the route exists return the value
+        return current_position
+
+    # function to check the identifier for uniqueness and persistancy
+    def check_identifier(self, identifier):
+        if(self.is_doi(identifier)):
+            return 1
+        elif(identifier.startswith("DRKS")):
+            return 1
+
+    @staticmethod
+    def is_doi(doi):
+        doi_pattern = r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$'
+        # Use the re.match function to check if the string matches the pattern
+        return bool(re.match(doi_pattern, doi))

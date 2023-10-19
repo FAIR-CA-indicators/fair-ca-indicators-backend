@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 import json
-from app.models.csh import evaluate
+from app.models.csh import study_evaluation, Score
 
 csh_router = APIRouter()
 
@@ -9,7 +9,7 @@ csh_router = APIRouter()
 
 
 @csh_router.get("/csh/study", tags=["Study"])
-def csh_study() -> str: #metadata, schema_version
+def csh_study() -> Score: #metadata, schema_version
     """
     **Parameters:**
         - *metadata*: json containing the metadata of a CSH entry
@@ -25,13 +25,20 @@ def csh_study() -> str: #metadata, schema_version
         json_data = json.load(json_file)
 
 
-    print(json_data)
+    #print(json_data)
 
     ####----------------####
 
     schema_version = "3.1"
-    evaluate(json_data, schema_version)
+    evaluation = study_evaluation(json_data, schema_version)
 
-    return "checkiiii" 
+    score: Score
+    score = evaluation.evaluate()
+
+    print("!")
+    print(evaluation.score)
+    print(score)
+    print("?")
+    return score
 
 print("Checki-di-check-check")
