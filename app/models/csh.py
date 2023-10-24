@@ -9,8 +9,8 @@ class Score(BaseModel):
     R: int = 0
 
 class study_evaluation: 
-    def __init__(self,json_data, schema):
-        print("TEWESTTS")
+    def __init__(self, json_data, schema):
+        print("+++++++++++ INSIDE study_evaluation")
         self.schema = schema
         self.metadata = json_data
         self.score = Score()

@@ -41,4 +41,3 @@ def csh_study() -> Score: #metadata, schema_version
     print("?")
     return score
 
-print("Checki-di-check-check")

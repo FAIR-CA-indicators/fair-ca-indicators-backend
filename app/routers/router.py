@@ -22,11 +22,12 @@ from app.dependencies.settings import get_settings
 
 base_router = APIRouter()
 
-
+print("TESTSTSTS")
 @base_router.post("/session", tags=["Sessions"])
 def create_session(
     subject: SessionSubjectIn = Depends(SessionSubjectIn.as_form),
     uploaded_file: Optional[UploadFile] = None,
+    metadata: Optional[object] = None
 ) -> Session:
     """
     Create a new session based on user input
@@ -40,9 +41,14 @@ def create_session(
     \f
     :param subject: Pydantic model containing user input.
     :param uploaded_file: If subject type is 'file', this contains the uploaded omex archive.
+    :param metadata: If subject is "metadata" this object contains metadata from the CSH
     :return: The created session
     """
     session_id = str(uuid.uuid4())
+
+    print("created session " + session_id)
+
+
     if subject.subject_type is SubjectType.url:
         raise HTTPException(
             501, "The api only supports manual assessments at the moment"
@@ -63,8 +69,15 @@ def create_session(
             subject.path = path
         finally:
             uploaded_file.file.close()
+    elif subject.subject_type is SubjectType.csh:
+        print(subject)
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SUBJECT TYPE CSH DETECTED!")
+        if subject.metadata is None:
+            raise HTTPException(
+                422, "No JSON object was attached for assessment. Impossible to process query"
+            )
     try:
-        session_handler = SessionHandler.from_user_input(session_id, subject)
+        session_handler = SessionHandler.from_user_input(session_id, subject)  #is the only for form input? My impression: i
     except ValueError as e:
         raise HTTPException(422, str(e))
     try:

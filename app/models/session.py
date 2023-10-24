@@ -46,11 +46,13 @@ class SubjectType(str, Enum):
     - *url*: The archive/model to evaluate is at a specific url
     - *file*: The archive/model file is directly provided by the user
     - *manual*: No file is provided, the user will assess themselves the archive/model
+    - *csh* A JSON is provided, containing metadata from a Central Study Hub 
     """
 
     url = "url"
     file = "file"
     manual = "manual"
+    csh = "csh"
 
 
 @as_form
@@ -74,6 +76,7 @@ class SessionSubjectIn(BaseModel):
     - *is_biomodel*: Whether the model comes from BioModel (required attribute if *subject_type* is **manual**)
     - *is_pmr*: Whether the model comes from PMR (required attribute if *subject_type* is **manual**)
     - *subject_type*: See SubjectType model
+    - *metadata*: metadata from CSH
     """
 
     path: Union[HttpUrl, FileUrl, FilePath, None] = None
@@ -86,10 +89,14 @@ class SessionSubjectIn(BaseModel):
     is_archive_metadata_standard: Optional[bool]
     is_biomodel: Optional[bool]
     is_pmr: Optional[bool]
+    random: Optional[bool]
+    metadata: object
     subject_type: SubjectType
+
 
     @validator("subject_type", always=True)
     def necessary_data_provided(cls, subject_type: str, values: dict):
+        print(values)
         if subject_type is SubjectType.manual:
             if (
                 values.get("has_archive") is None
@@ -106,6 +113,9 @@ class SessionSubjectIn(BaseModel):
         elif subject_type is SubjectType.url:
             if values.get("path") is None:
                 raise ValueError("Url assessments need a url")
+        elif subject_type is SubjectType.csh:
+            if (values.get("metadata") is None):
+                raise ValueError("CSH assessments need a JSON object")
         return subject_type
 
     def dict(self, **kwargs):
@@ -192,7 +202,7 @@ class SessionHandler:
         self.assessed_data: Optional["CombineArchive"] = None
 
         if not session.tasks:
-            if self.user_input.subject_type is not SubjectType.manual:
+            if self.user_input.subject_type not in [SubjectType.manual, SubjectType.csh]:
                 self.assessed_data = self.retrieve_data(self.user_input.path)
             self.create_tasks()
 
@@ -258,6 +268,20 @@ class SessionHandler:
         subject = session_json.pop("session_subject")
         session = Session(**session_json, session_subject=subject, tasks=tasks)
         return cls(session)
+
+    @classmethod
+    def from_csh(cls, session_id: str, session_data: SessionSubjectIn) -> "SessionHandler":
+        """
+        Creates a session based on A JSON from CSH
+
+        :param session_id: The session identifier that will be used
+        :param session_data:
+        :return: A SessionHandler object
+        """
+
+        session = Session(id=session_id, session_subject=session_data)
+        return cls(session)
+
 
     def _build_tasks_dict(self, tasks: list[Task]):
         """
