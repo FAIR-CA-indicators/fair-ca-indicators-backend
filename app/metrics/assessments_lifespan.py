@@ -24,7 +24,10 @@ async def get_tasks_definitions(app: FastAPI):
     config = get_settings()
 
     def parse_line(line):
-        sub_group = regex_csh.search(line["TaskName"]).groups()[0]
+        sub_group = regex_csh.search(line["TaskName"])
+        if sub_group is None:
+            return
+        sub_group = sub_group.groups()[0]
         task_group = sub_group[0]
         return {
             line["TaskName"]: models.Indicator(
@@ -39,8 +42,13 @@ async def get_tasks_definitions(app: FastAPI):
         }
 
     # Get the list of tasks and their definitions from internal file
-    with open(config.csh_indicators_path, "r") as file_handler:
+    with open(config.indicators_path, "r") as file_handler:
         csv_reader = DictReader(file_handler, dialect="unix")
-        [fair_indicators.update(parse_line(line)) for line in csv_reader]
+        for line in csv_reader:
+            parsed_line = parse_line(line)
+            if parsed_line is not None:
+                print(parsed_line)
+                fair_indicators.update(parsed_line)
+        #[fair_indicators.update(parse_line(line)) for line in csv_reader]
 
     yield

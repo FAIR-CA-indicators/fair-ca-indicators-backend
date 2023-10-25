@@ -477,6 +477,10 @@ class SessionHandler:
 
         if indicator in config.pmr_indicator_status and self.user_input.is_pmr:
             return TaskStatus(config.pmr_assessment_status[indicator]), True
+        
+        if indicator in config.csh_metadata_status:
+            print("+++++++HUHU++++++")
+            return TaskStatus(config.csh_metadata_status[indicator]), True
 
         if indicator in config.assessment_dependencies:
             dependency_dict = config.assessment_dependencies[indicator]
@@ -577,6 +581,7 @@ class SessionHandler:
         """Starts the assessment of automated tasks"""
         for task_id in self.indicator_tasks.values():
             task = self.session_model.get_task(task_id)
+            print(task)
             if isinstance(task, AutomatedTask):
                 task.do_evaluate(self.assessed_data.dict())
 

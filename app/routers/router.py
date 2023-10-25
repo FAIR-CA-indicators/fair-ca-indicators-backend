@@ -22,7 +22,6 @@ from app.dependencies.settings import get_settings
 
 base_router = APIRouter()
 
-print("TESTSTSTS")
 @base_router.post("/session", tags=["Sessions"])
 def create_session(
     subject: SessionSubjectIn = Depends(SessionSubjectIn.as_form),
