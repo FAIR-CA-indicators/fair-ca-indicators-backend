@@ -69,14 +69,12 @@ def create_session(
         finally:
             uploaded_file.file.close()
     elif subject.subject_type is SubjectType.csh:
-        print(subject)
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!! SUBJECT TYPE CSH DETECTED!")
         if subject.metadata is None:
             raise HTTPException(
                 422, "No JSON object was attached for assessment. Impossible to process query"
             )
     try:
-        session_handler = SessionHandler.from_user_input(session_id, subject)  #is the only for form input? My impression: i
+        session_handler = SessionHandler.from_user_input(session_id, subject) 
     except ValueError as e:
         raise HTTPException(422, str(e))
     try:

@@ -202,8 +202,13 @@ class SessionHandler:
         self.assessed_data: Optional["CombineArchive"] = None
 
         if not session.tasks:
-            if self.user_input.subject_type not in [SubjectType.manual, SubjectType.csh]:
+            if self.user_input.subject_type in [SubjectType.file, SubjectType.url]: #url is currently not supported, thus this step wouldn't be reached for URL support
                 self.assessed_data = self.retrieve_data(self.user_input.path)
+            elif self.user_input.subject_type is SubjectType.csh:
+                print("---")
+                print(self.user_input)
+                print("---")
+                self.assessed_data = self.user_input.metadata
             self.create_tasks()
 
         else:
@@ -583,7 +588,11 @@ class SessionHandler:
             task = self.session_model.get_task(task_id)
             print(task)
             if isinstance(task, AutomatedTask):
-                task.do_evaluate(self.assessed_data.dict())
+                if self.user_input.subject_type is not SubjectType.csh:
+                    task.do_evaluate(self.assessed_data.dict())
+                else:
+                    print("???????????????")
+                    task.do_evaluate(self.assessed_data)
 
     def json(self):
         """Returns the json representation of the session model"""
