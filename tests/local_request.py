@@ -1,12 +1,13 @@
 import requests
 import json
+import time
 
 print("TESTING THE SERVER")
 
 # Define the URL of the local server
 url = 'http://localhost:8000/session'
 
-# Define the data you want to send in the POST request (as a dictionary)
+# metadata that will be used for development
 metadata = {
   "link": None,
   "resource": {
@@ -346,7 +347,17 @@ response = requests.post(url, data=body)
 # Check the response
 if response.status_code == 200:
     print("Request was successful.")
-    print("Response:", response.json()['tasks'])
+    
+    print("Response:", response.json()['status'])
+    time.sleep(3)
+    print("should be 3 seconds delayed")
+    #get session to look if its finished
+    while response.json()['status'] != 'finished':  
+      time.sleep(3)
+      response = requests.get(url + '/' +  response.json()['id'], )
+      print('status: ', response.json()['status'])
+ 
+    print(response.json())
 else:
     print("Request failed with status code:", response.status_code)
     print(response.text)

@@ -96,7 +96,6 @@ class SessionSubjectIn(BaseModel):
 
     @validator("subject_type", always=True)
     def necessary_data_provided(cls, subject_type: str, values: dict):
-        print(values)
         if subject_type is SubjectType.manual:
             if (
                 values.get("has_archive") is None
@@ -205,9 +204,6 @@ class SessionHandler:
             if self.user_input.subject_type in [SubjectType.file, SubjectType.url]: #url is currently not supported, thus this step wouldn't be reached for URL support
                 self.assessed_data = self.retrieve_data(self.user_input.path)
             elif self.user_input.subject_type is SubjectType.csh:
-                print("---")
-                print(self.user_input)
-                print("---")
                 self.assessed_data = self.user_input.metadata
             self.create_tasks()
 
@@ -484,7 +480,6 @@ class SessionHandler:
             return TaskStatus(config.pmr_assessment_status[indicator]), True
         
         if indicator in config.csh_metadata_status:
-            print("+++++++HUHU++++++")
             return TaskStatus(config.csh_metadata_status[indicator]), True
 
         if indicator in config.assessment_dependencies:
@@ -591,7 +586,6 @@ class SessionHandler:
                 if self.user_input.subject_type is not SubjectType.csh:
                     task.do_evaluate(self.assessed_data.dict())
                 else:
-                    print("???????????????")
                     task.do_evaluate(self.assessed_data)
 
     def json(self):
