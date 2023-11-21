@@ -5,7 +5,7 @@ import requests
 
 from .csh_helpers import check_route
 from app.dependencies.settings import get_settings
-from ... import models 
+#from ... import models
 
 from app.celery.celery_app import app
 
@@ -18,21 +18,23 @@ def is_doi(identifier):
 
 
 
-def incoperate_results(task_dict: dict, result: ["success","failed","warning"], test: bool):
+def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: bool):
+    import app.models #dynamic import
+
     print("incoperate results!")
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
 
     print(config.celery_key)
-    status = models.TaskStatusIn(
-        status=models.TaskStatus(result), force_update=config.celery_key
+    status = app.models.TaskStatusIn(
+        status= app.models.TaskStatus(result), force_update=config.celery_key
     )
 
     print(f"Task status computed: {result}")
     # Needs to send a request for the task to be updated
     if test:
         print("test is true")
-        return models.TaskStatus(result)
+        return app.models.TaskStatus(result)
     else:
         url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
         print(f"Patching {url}")
