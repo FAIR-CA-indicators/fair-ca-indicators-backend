@@ -116,6 +116,8 @@ class Task(BaseModel):
         :param name: The name given by the user
         :return: The valid assessment name
         """
+        #filter indicators according to subject
+        
         if name not in fair_indicators:
             raise ValueError(f"Given assessment name {name} is not a known indicator")
         return name

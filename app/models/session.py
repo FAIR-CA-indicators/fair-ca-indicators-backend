@@ -440,7 +440,16 @@ class SessionHandler:
 
         :return: None
         """
-        for indicator in fair_indicators.values():
+        # filter fair_indicators for specific session subject
+        print("checking here")
+        if self.user_input.subject_type is SubjectType.csh:
+            name_filter = 'CSH'
+        else:
+            name_filter = 'CA'
+        filter_indicators = {key: value for key, value in fair_indicators.items() if value.name.startswith(name_filter)}
+
+
+        for indicator in filter_indicators.values():
             # Skip if task for indicator is already created
             if indicator.name in self.indicator_tasks:
                 continue

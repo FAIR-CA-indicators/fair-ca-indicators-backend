@@ -21,13 +21,15 @@ async def get_tasks_definitions(app: FastAPI):
     """
     regex = re.compile(r"^CA-RDA-([FAIR][1-9](\.[0-9])?)-")
     regex_csh = re.compile(r"^CSH-RDA-([FAIR][1-9](\.[0-9])?)-")
+    regex_joined = re.compile(r"^(CA-RDA|CSH-RDA)-([FAIR][1-9](\.[0-9])?)-")
     config = get_settings()
 
+    print(config)
     def parse_line(line):
-        sub_group = regex_csh.search(line["TaskName"])
+        sub_group = regex_joined.search(line["TaskName"])
         if sub_group is None:
             return
-        sub_group = sub_group.groups()[0]
+        sub_group = sub_group.groups()[1]
         task_group = sub_group[0]
         return {
             line["TaskName"]: models.Indicator(
