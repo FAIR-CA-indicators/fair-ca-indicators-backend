@@ -10,7 +10,7 @@ from app.dependencies.settings import get_settings
 tags_metadata = [
     {
         "name": "Indicators",
-        "description": "FAIR Combine assessments. Endpoints to retrieve the descriptions of the assessments done by "
+        "description": "FAIR assessments. Endpoints to retrieve the descriptions of the assessments done by "
         "the application "
         "to evaluate how FAIR a resource is/",
     },
@@ -29,22 +29,23 @@ tags_metadata = [
 ]
 
 description = """
-FAIR Combine is a web application designed to help users assess how FAIR their
-their Combine resources are.
+FAIR Eval is a web application designed to help users assess how FAIR their
+their scientific resources are. Currently supported are FAIR Combine and CSH resources.
 
 Users may submit their Combine model, and the application will create a list
 of assessments following the FAIR principle. Some of these assessments will run
 in the background while others will need to be filled by the users.
+Users may also make API requests to evalutate the metadata of a CSH resource.
 
 Once all assessments are completed, the application returns a set of scores
-describing how FAIR their model is.
+describing how FAIR their resource is.
 """
 
 
 app = FastAPI(
-    title="FAIR Combine API",
+    title="FAIR Eval API",
     description=description,
-    version="0.0.1",
+    version="0.1.0",
     openapi_tags=tags_metadata,
     lifespan=get_tasks_definitions,
 )

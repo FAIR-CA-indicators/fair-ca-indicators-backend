@@ -11,10 +11,15 @@ from app.celery.celery_app import app
 
 config = get_settings()
 
-def is_doi(identifier):
+def is_doi(identifier: str):
     doi_pattern = r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$'
     # Use the re.match function to check if the string matches the pattern
-    return bool(re.match(doi_pattern, identifier))
+    print("identifier: ", identifier)
+    match = re.match(doi_pattern, identifier)
+    print("?? match")
+    print("doi match: ", match)
+    return False
+    #return bool(re.match(doi_pattern, identifier))
 
 
 
@@ -49,13 +54,9 @@ def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: b
     # Works, but does not trigger updating of children
     # redis_app.json().set(f"session:{session_id}", f".tasks.{task_id}.status", obj=result)
 
-
-
 @app.task
-def csh_f1_2_globally_unique_identifier(
-    task_dict: dict, data: dict, test: bool = False
-):
-        print("f1_2_glob")
+def csh_f1_2_globally_unique_identifier(task_dict: dict, data: dict, test: bool = False):
+        print(" ")
         """
         Representation of celery task to evaluate an assessment.
         These celery tasks should be in the format:
@@ -80,15 +81,18 @@ def csh_f1_2_globally_unique_identifier(
 
 
         identifier = check_route(data, ["resource", "resource_identifier"])
-
+        print("grabbed identifier: ", identifier)
         #could also retrive "type" from data instead of using .startswith
-
-        if(is_doi(identifier)):
+        if(identifier is False):
+            result = "failed"
+        elif(is_doi(identifier)):
             result = "success"
         elif(identifier.startswith("DRKS")):
             result = "success"    
         else:
             result = "failed"
+
+        print("!!!!!!!!!!!!! ---- ", result)
         
         incoperate_results(task_dict, result, test)
 
@@ -154,3 +158,93 @@ def csh_a1_contains_access_information(task_dict: dict, data: dict, test: bool =
         result = "failed"
 
     incoperate_results(task_dict, result, test)
+    print("working?")
+
+@app.task
+def csh_i3_01_ref_other_metadata(task_dict: dict, data: dict, test: bool = False):
+    #check if other metadata is referenced
+    ref_resources = check_route(data, ["resource", "ids"])
+    print("INFO - csh-i3-01")
+    result = "not_applicable"
+    if(ref_resources != False):
+        print("IDs: ", ref_resources, type(ref_resources))
+        for res in ref_resources:
+            print(res, type(res))
+            print(res.get('typeGeneral'))
+            if(res.get('typeGeneral') != 'Dataset'):
+                result = "success"
+    incoperate_results(task_dict, result, test)
+
+@app.task
+def csh_i3_02_ref_other_data(task_dict: dict, data: dict, test: bool = False):
+    #check if other data is referenced
+    ref_resources = check_route(data, ["resource", "ids"])
+    print("INFO - csh-i3-02")
+    result = "not_applicable"
+    if(ref_resources != False):
+        for res in ref_resources:
+            print(res)
+            print(res.get('typeGeneral'))
+            if(res.get('typeGeneral') == 'Dataset'):
+                result = "success"
+    incoperate_results(task_dict, result, test)
+
+@app.task
+def csh_i3_03_qual_ref_other_metadata(task_dict: dict, data: dict, test: bool = False):
+    #check if other metadata is referenced
+    ref_resources = check_route(data, ["resource", "ids"])
+    print("INFO - csh-i3-03")
+    result = "not_applicable"
+    if(ref_resources != False):
+        for res in ref_resources:
+            if(res.get('typeGeneral') != 'Dataset'):
+                #set to fail if ONE refed metadata has no relationType
+                if(result == "not_applicable"):
+                    result = "success"
+                if(res.get('relationType') == None):
+                    result = "failed"
+    incoperate_results(task_dict, result, test)
+
+@app.task
+def csh_i3_04_qual_ref_other_data(task_dict: dict, data: dict, test: bool = False):
+    #check if other data is referenced
+    ref_resources = check_route(data, ["resource", "ids"])
+    print("INFO - csh-i3-04")
+    result = "not_applicable"
+    if(ref_resources != False):
+        for res in ref_resources:
+            if(res.get('typeGeneral') == 'Dataset'):
+                #set to fail if ONE refed metadata has no relationType
+                if(result == "not_applicable"):
+                    result = "success"
+                if(res.get('relationType') == None):
+                    result = "failed"
+    incoperate_results(task_dict, result, test)
+
+##### Reusability
+@app.task
+def csh_r1_1_01_has_reuse_license(task_dict: dict, data: dict, test: bool = False):
+    resource_type = check_route(data, ["resource", "classification", "type"])
+    if(resource_type == False): resource_type = check_route(data, ["resource", "resource_classification", "resource_type"])
+    if(resource_type in ["Study", "Substudy/Data collection event"]):
+        result = "warning" #TODO: Ask others to specify how this can be checked
+    else:
+        license_info = check_route(data, ["resource", "nonStudyDetails", "useRights"])
+        if(license_info != False):
+            result = "success"
+        else:
+            result = "failed"
+    incoperate_results(task_dict, result, test)
+
+@app.task #TODO: verify if this automated task really works since it depends on a parent task
+def csh_r1_1_02_has_standard_reuse_license(task_dict: dict, data: dict, test: bool = False):
+    #check if userights label is a fitting license
+    license_label  = check_route(data,["resource", "nonStudyDetails", "nonStudyDetails", "useRights"])
+    if(license_label in ["Creative Commons Zero v1.0 Universal", "Creative Commons Attribution 4.0 International", "Creative Commons Attribution Non Commercial 4.0 International", "Creative Commons Attribution Share Alike 4.0 International", "Creative Commons Attribution Non Commercial Share Alike 4.0 International"]):
+        result = "success"
+    elif(license_label == "Other"):
+        result = "warning"
+    else:
+        result = "failed"
+    incoperate_results(task_dict, result, test)
+
