@@ -12,7 +12,7 @@ class Config(BaseSettings):
     redis_url = os.environ.get("REDIS_URL", "localhost")
     redis_port = os.environ.get("REDIS_PORT", 6379)
     redis_db_number: int = 0
-    indicators_path = "app/metrics/metrics.csv"
+    indicators_path = "app/metrics/metrics.csv"  #this loads the indicators
     celery_broker = os.environ.get(
         "CELERY_BROKER_URL", f"redis://{redis_url}:{redis_port}/{redis_db_number}"
     )
@@ -70,6 +70,28 @@ class Config(BaseSettings):
         "CA-RDA-R1.3-02MA",
         "CA-RDA-R1.3-03MA",
     ]
+    
+    # Mapping of the indicators that can be automatically set if the metadata is from CSH
+    csh_metadata_status: dict[str, str] = {
+        "CSH-RDA-F1-01M": "success",
+        "CSH-RDA-F2-01M": "success",
+        "CSH-RDA-F3-01M": "failed",
+        "CSH-RDA-F4-01M": "success",
+        "CSH-RDA-A1-02M": "success",
+        "CSH-RDA-A1-03M": "success",
+        "CSH-RDA-A1-04M": "success",
+        "CSH-RDA-A1.1-01M": "success",
+        "CSH-RDA-A2-01M": "warnings",
+        "CSH-RDA-I1-01M": "success",
+        "CSH-RDA-I1-02M": "success",
+        "CSH-RDA-I2-01M": "success",
+        "CSH-RDA-R1-01M": "warnings", #this indicator should be adapted in more detail before implementing
+        "CSH-RDA-R1.2-01M": "failed", #re-evaluate if provenence can be used better in CSH at the moment
+        "CSH-RDA-R1.2-02M": "failed", #re-evaluate if provenence can be used better in CSH at the moment
+        "CSH-RDA-R1.1-03M": "failed",
+        "CSH-RDA-R1.3-01M": "success",
+        "CSH-RDA-R1.3-02M": "success"
+    }
 
     # Mapping of indicators and their status that can be automatically set if data is stored in BioModel
     biomodel_assessment_status: dict[str, str] = {
@@ -107,11 +129,21 @@ class Config(BaseSettings):
         "CA-RDA-I3-04MM": {"condition": "or", "indicators": ["CA-RDA-I3-02MM"]},
         "CA-RDA-R1.1-02MA": {"condition": "or", "indicators": ["CA-RDA-R1.1-01MA"]},
         "CA-RDA-R1.1-03MA": {"condition": "or", "indicators": ["CA-RDA-R1.1-01MA"]},
+        "CSH-RDA-R1.1-02M": {"condition": "or", "indicators": ["CSH-RDA-R1.1-01M"]},
+        "CSH-RDA-R1.1-03M": {"condition": "or", "indicators": ["CSH-RDA-R1.1-01M"]}
     }
 
     automated_assessments: dict[str, str] = {
         "CA-RDA-F1-01Model": "f1_model_persistent_identifier",
         "CA-RDA-F4-01MM": "f4_model_metadata_harvestable",
+        "CSH-RDA-F1-02M": "csh_f1_2_globally_unique_identifier",
+        "CSH-RDA-A1-01M": "csh_a1_contains_access_information",
+        "CSH-RDA-I3-01M": "csh_i3_01_ref_other_metadata",
+        "CSH-RDA-I3-02M": "csh_i3_02_ref_other_data",
+        "CSH-RDA-I3-03M": "csh_i3_03_qual_ref_other_metadata",
+        "CSH-RDA-I3-04M": "csh_i3_04_qual_ref_other_data",
+        "CSH-RDA-R1.1-01M": "csh_r1_1_01_has_reuse_license",
+        "CSH-RDA-R1.1-02M": "csh_r1_1_02_has_standard_reuse_license"
     }
 
 
