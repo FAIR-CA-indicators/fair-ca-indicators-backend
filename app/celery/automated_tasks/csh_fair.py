@@ -25,12 +25,10 @@ def is_doi(identifier: str):
 
 def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: bool):
     import app.models #dynamic import
-
-    print("incoperate results!")
+ 
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
 
-    print(config.celery_key)
     status = app.models.TaskStatusIn(
         status= app.models.TaskStatus(result), force_update=config.celery_key
     )
@@ -42,12 +40,32 @@ def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: b
         return app.models.TaskStatus(result)
     else:
         url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
-        print(f"Patching {url}")
-        requests.patch(
-            url,
-            json=status.dict(),
-        )
+        print(f"--Patching {url}", status.dict())
+        try:
+            # Send PATCH request
+            response = requests.patch(
+                url,
+                json=status.dict(),
+            )
+            response.raise_for_status()  # Raise exception for non-2xx response status codes
+            print("---->", response.text, "<----")
+            print("PATCH request successful")
 
+        except requests.RequestException as e:
+            # Handle request-related exceptions
+            print(f"Error sending PATCH request: {e}")
+
+            # Optionally, raise the exception to propagate it further
+            # raise
+
+        except Exception as e:
+            # Handle other types of exceptions
+            print(f"An unexpected error occurred: {e}")
+
+            # Optionally, raise the exception to propagate it further
+            # raise
+
+    
     # Does not work because celery does not have access to fair_indicators
     # routers.update_task(session_id, task_id, status)
 
@@ -56,7 +74,6 @@ def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: b
 
 @app.task
 def csh_f1_2_globally_unique_identifier(task_dict: dict, data: dict, test: bool = False):
-        print(" ")
         """
         Representation of celery task to evaluate an assessment.
         These celery tasks should be in the format:
@@ -79,7 +96,7 @@ def csh_f1_2_globally_unique_identifier(task_dict: dict, data: dict, test: bool 
         :return: None
         """
 
-
+        print("CHECK!! globally uni ")
         identifier = check_route(data, ["resource", "resource_identifier"])
         print("grabbed identifier: ", identifier)
         #could also retrive "type" from data instead of using .startswith
@@ -91,9 +108,7 @@ def csh_f1_2_globally_unique_identifier(task_dict: dict, data: dict, test: bool 
             result = "success"    
         else:
             result = "failed"
-
-        print("!!!!!!!!!!!!! ---- ", result)
-        
+       
         incoperate_results(task_dict, result, test)
 
 
@@ -203,6 +218,7 @@ def csh_i3_03_qual_ref_other_metadata(task_dict: dict, data: dict, test: bool = 
                     result = "success"
                 if(res.get('relationType') == None):
                     result = "failed"
+    print("sollte jetzt das ergebnis in die session schreiben")
     incoperate_results(task_dict, result, test)
 
 @app.task
@@ -224,6 +240,7 @@ def csh_i3_04_qual_ref_other_data(task_dict: dict, data: dict, test: bool = Fals
 ##### Reusability
 @app.task
 def csh_r1_1_01_has_reuse_license(task_dict: dict, data: dict, test: bool = False):
+    print("CHECK! has reuse license")
     resource_type = check_route(data, ["resource", "classification", "type"])
     if(resource_type == False): resource_type = check_route(data, ["resource", "resource_classification", "resource_type"])
     if(resource_type in ["Study", "Substudy/Data collection event"]):

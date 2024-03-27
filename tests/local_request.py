@@ -4,6 +4,7 @@ import time
 
 print("TESTING THE SERVER")
 
+
 # Define the URL of the local server
 url = 'http://localhost:8000/session'
 
@@ -131,18 +132,19 @@ response = requests.post(url, data=body)
 # Check the response
 if response.status_code == 200:
     print("Request was successful.")
-    time.sleep(3)
-    print("wait 3 seconds")
-    #get session to look if its finished
-    while response.json()['status'] != 'finished':  
-      time.sleep(3)
-      response = requests.get(url + '/' +  response.json()['id'], )
-      tasks = response.json()['tasks']
-      for values in tasks.values():
-        print(values['name'], ":  ", values['status'])
-      print('status: ', response.json()['status'])
+
+    if response.json()['status'] != 'finished':  
+      print("not finished")
+    
+    tasks = response.json()['tasks']
+    for values in tasks.values():
+      print(values['name'], ":  ", values['status'])
+    print('status: ', response.json()['status'])
  
     print(response.json())
+
+    #response = requests.get(url + '/' +  response.json()['id'], )
+    #print(response.json())
 else:
     print("Request failed with status code:", response.status_code)
     print(response.text)

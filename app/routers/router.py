@@ -1,9 +1,13 @@
+import asyncio
 import uuid
 import os
 from shutil import copyfileobj
+from app.models.session import SessionStatus
 from fastapi import APIRouter, HTTPException, UploadFile, Depends
 from typing import List, Optional
 from redis.exceptions import ResponseError
+#import asyncio
+
 
 
 from app.models import (
@@ -23,7 +27,7 @@ from app.dependencies.settings import get_settings
 base_router = APIRouter()
 
 @base_router.post("/session", tags=["Sessions"])
-def create_session(
+async def create_session(
     subject: SessionSubjectIn = Depends(SessionSubjectIn.as_form),
     uploaded_file: Optional[UploadFile] = None,
     metadata: Optional[object] = None
@@ -74,7 +78,11 @@ def create_session(
                 422, "No JSON object was attached for assessment. Impossible to process query"
             )
     try:
-        session_handler = SessionHandler.from_user_input(session_id, subject) 
+        if subject.subject_type is SubjectType.csh:
+            session_handler = SessionHandler.from_csh(session_id, subject)
+            #session_handler.get(timeout=5)
+        else:
+            session_handler = SessionHandler.from_user_input(session_id, subject) 
     except ValueError as e:
         raise HTTPException(422, str(e))
     try:
@@ -83,12 +91,33 @@ def create_session(
             "$",
             obj=session_handler.session_model.dict(),
         )
-        session_handler.start_automated_tasks()
+        
+        if subject.subject_type is not SubjectType.csh:
+            session_handler.start_automated_tasks()
+        else:
+            async_tasks = session_handler.start_automated_tasks()
+            await async_tasks
+            await asyncio.sleep(2)
+            print("done with ASYNC TASK")
+                        
+                
     except TypeError as e:
         print(session_handler.session_model)
         print(session_handler.session_model.dict())
         raise e
 
+    if subject.subject_type is SubjectType.csh:
+        try:
+            s_json = redis_app.json().get(f"session:{session_id}")
+            if s_json is not None:
+                subject = s_json.pop("session_subject")
+                s = Session(**s_json, session_subject=subject)
+                return s
+        
+        except ResponseError as e:
+            print(f"An error occurred in Redis: {str(e)}")
+            raise HTTPException(status_code=404, detail="No session with this id was found")
+       
     return session_handler.session_model
 
 

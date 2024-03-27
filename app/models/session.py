@@ -1,7 +1,11 @@
+import asyncio
 from uuid import uuid4
+
+import requests
 from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator, ValidationError
 from typing import Union, Optional
 from enum import Enum
+#import asyncio
 
 from .tasks import (
     Task,
@@ -18,6 +22,9 @@ from app.redis_controller import redis_app
 from app.decorators import as_form
 
 from .combine_object import CombineArchive
+
+
+import time
 
 
 class SessionStatus(str, Enum):
@@ -113,6 +120,8 @@ class SessionSubjectIn(BaseModel):
             if values.get("path") is None:
                 raise ValueError("Url assessments need a url")
         elif subject_type is SubjectType.csh:
+            for value in values.items():
+                print(value)
             if (values.get("metadata") is None):
                 raise ValueError("CSH assessments need a JSON object")
         return subject_type
@@ -205,6 +214,7 @@ class SessionHandler:
                 self.assessed_data = self.retrieve_data(self.user_input.path)
             elif self.user_input.subject_type is SubjectType.csh:
                 self.assessed_data = self.user_input.metadata
+                self._build_tasks_dict(list(self.session_model.tasks.values()))
             self.create_tasks()
 
         else:
@@ -223,6 +233,22 @@ class SessionHandler:
         :return: A SessionHandler object
         """
         session = Session(id=session_id, session_subject=session_data)
+        #print(cls(session))
+        """n = 0
+        while session.status == "queued" and n < 2:
+            print("S-ID", session_id)
+            s_json = redis_app.json().get(f"session:{session_id}")
+            if s_json is not None:
+                subject = s_json.pop("session_subject")
+                session = Session(**s_json, session_subject=subject)
+            else:
+                print("ALERTA")
+            time.sleep(3)
+
+            print(session.status)
+            print("^!!^")
+            n += 1 """
+        
         return cls(session)
 
     @classmethod
@@ -280,7 +306,11 @@ class SessionHandler:
         :return: A SessionHandler object
         """
 
+
         session = Session(id=session_id, session_subject=session_data)
+        
+        print(session.id)
+
         return cls(session)
 
 
@@ -325,6 +355,13 @@ class SessionHandler:
             self.session_model.get_task(task_id)
             for task_id in self.indicator_tasks.values()
         ]
+        """for task in all_tasks:
+            if task.status is TaskStatus.queued:
+                print("QUEUED!", task.name)
+            elif task.status is TaskStatus.started:
+                print("Started!", task.name) """
+
+
         return any(
             [
                 task.status is TaskStatus.queued or task.status is TaskStatus.started
@@ -332,13 +369,18 @@ class SessionHandler:
             ]
         )
 
+
     def update_session_data(self):
         """
         Calculate the different statistics of the session (scores, non_applicable tasks ratio, ...)
         :return: None.
         """
+        print("Trying to update SCORE. Is session running? ", self.is_running())
         if not self.is_running():
             self.session_model.status = SessionStatus.finished
+        else:
+            print("HAE?")
+
 
         all_tasks = [
             self.session_model.get_task(task_key)
@@ -358,6 +400,7 @@ class SessionHandler:
         passed_applicable_nonessential = 0
         passed_applicable_all = 0
 
+        print("iterate through tasks...")
         for task in all_tasks:
             passed_all += task.score
 
@@ -586,17 +629,18 @@ class SessionHandler:
             child.status = default_status
             child.disabled = default_disabled
 
-    def start_automated_tasks(self):
+    async def start_automated_tasks(self):
         """Starts the assessment of automated tasks"""
+        print(">>>>>>>start_automated_tasks<<<<<<<<<<<")
         for task_id in self.indicator_tasks.values():
             task = self.session_model.get_task(task_id)
-            print(task)
+            
             if isinstance(task, AutomatedTask):
                 if self.user_input.subject_type is not SubjectType.csh:
                     task.do_evaluate(self.assessed_data.dict())
                 else:
                     task.do_evaluate(self.assessed_data)
-
+            
     def json(self):
         """Returns the json representation of the session model"""
         return self.session_model.json()
