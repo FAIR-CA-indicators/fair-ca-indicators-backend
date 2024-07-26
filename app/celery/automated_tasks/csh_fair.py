@@ -22,7 +22,7 @@ def is_doi(identifier: str):
 
 
 
-def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: bool):
+def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: bool): ## shouldn't app.models.TaskStaus be used without ' ?
     import app.models #dynamic import
  
     session_id = task_dict["session_id"]
@@ -218,7 +218,28 @@ def csh_a1_contains_access_information(task_dict: dict, data: dict, test: bool =
         result = "failed"
 
     incoperate_results(task_dict, result, test)
-    print("working?")
+
+@app.task
+def csh_a1_03_id_resolves_to_record(task_dict, result, test):
+    """ 1. build URL with base_url + ID
+        2. somehow ping URL  """
+    id = check_route(["resource", "identifier"])
+    url = "https://csh.nfdi4health.de/resource/" + id
+
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            print(f"The URL {url} resolves successfully.")
+            result = "success"
+        else:
+            print(f"The URL {url} returned status code {response.status_code}.")
+            result = "failed"
+    except requests.exceptions.RequestException as e:
+        print("An error occured on checking the URL")
+        result = "failed"
+
+    incoperate_results(task_dict, result, test)
+
 
 @app.task
 def csh_i3_01_ref_other_metadata(task_dict: dict, data: dict, test: bool = False):
