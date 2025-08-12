@@ -20,8 +20,8 @@ async def get_tasks_definitions(app: FastAPI):
     :return: None
     """
     regex = re.compile(r"^CA-RDA-([FAIR][1-9](\.[0-9])?)-")
-    regex_csh = re.compile(r"^CSH-RDA-([FAIR][1-9](\.[0-9])?)-")
-    regex_joined = re.compile(r"^(CA-RDA|CSH-RDA)-([FAIR][1-9](\.[0-9])?)-")
+    regex_hsh = re.compile(r"^HSH-RDA-([FAIR][1-9](\.[0-9])?)-")
+    regex_joined = re.compile(r"^(CA-RDA|HSH-RDA)-([FAIR][1-9](\.[0-9])?)-")
     config = get_settings()
 
     print(config)

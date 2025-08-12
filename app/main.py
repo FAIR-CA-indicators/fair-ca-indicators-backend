@@ -30,12 +30,12 @@ tags_metadata = [
 
 description = """
 FAIR Eval is a web application designed to help users assess how FAIR their
-their scientific resources are. Currently supported are FAIR Combine and CSH resources.
+their scientific resources are. Currently supported are FAIR Combine and HSH resources.
 
 Users may submit their Combine model, and the application will create a list
 of assessments following the FAIR principle. Some of these assessments will run
 in the background while others will need to be filled by the users.
-Users may also make API requests to evalutate the metadata of a CSH resource.
+Users may also make API requests to evalutate the metadata of a HSH resource.
 
 Once all assessments are completed, the application returns a set of scores
 describing how FAIR their resource is.

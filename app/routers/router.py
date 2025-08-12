@@ -44,7 +44,7 @@ async def create_session(
     \f
     :param subject: Pydantic model containing user input.
     :param uploaded_file: If subject type is 'file', this contains the uploaded omex archive.
-    :param metadata: If subject is "metadata" this object contains metadata from the CSH
+    :param metadata: If subject is "metadata" this object contains metadata from the HSH
     :return: The created session
     """
     session_id = str(uuid.uuid4())
@@ -72,14 +72,14 @@ async def create_session(
             subject.path = path
         finally:
             uploaded_file.file.close()
-    elif subject.subject_type is SubjectType.csh:
+    elif subject.subject_type is SubjectType.hsh:
         if subject.metadata is None:
             raise HTTPException(
                 422, "No JSON object was attached for assessment. Impossible to process query"
             )
     try:
-        if subject.subject_type is SubjectType.csh:
-            session_handler = SessionHandler.from_csh(session_id, subject)
+        if subject.subject_type is SubjectType.hsh:
+            session_handler = SessionHandler.from_hsh(session_id, subject)
             #session_handler.get(timeout=5)
         else:
             session_handler = SessionHandler.from_user_input(session_id, subject) 
@@ -92,7 +92,7 @@ async def create_session(
             obj=session_handler.session_model.dict(),
         )
         
-        if subject.subject_type is not SubjectType.csh:
+        if subject.subject_type is not SubjectType.hsh:
             session_handler.start_automated_tasks()
         else:
             async_tasks = session_handler.start_automated_tasks()
@@ -106,7 +106,7 @@ async def create_session(
         print(session_handler.session_model.dict())
         raise e
 
-    if subject.subject_type is SubjectType.csh:
+    if subject.subject_type is SubjectType.hsh:
         try:
             s_json = redis_app.json().get(f"session:{session_id}")
             if s_json is not None:

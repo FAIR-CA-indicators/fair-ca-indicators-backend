@@ -53,13 +53,13 @@ class SubjectType(str, Enum):
     - *url*: The archive/model to evaluate is at a specific url
     - *file*: The archive/model file is directly provided by the user
     - *manual*: No file is provided, the user will assess themselves the archive/model
-    - *csh* A JSON is provided, containing metadata from a Central Study Hub 
+    - *hsh* A JSON is provided, containing metadata from a Central Study Hub 
     """
 
     url = "url"
     file = "file"
     manual = "manual"
-    csh = "csh"
+    hsh = "hsh"
 
 
 @as_form
@@ -83,7 +83,7 @@ class SessionSubjectIn(BaseModel):
     - *is_biomodel*: Whether the model comes from BioModel (required attribute if *subject_type* is **manual**)
     - *is_pmr*: Whether the model comes from PMR (required attribute if *subject_type* is **manual**)
     - *subject_type*: See SubjectType model
-    - *metadata*: metadata from CSH
+    - *metadata*: metadata from HSH
     """
 
     path: Union[HttpUrl, FileUrl, FilePath, None] = None
@@ -119,11 +119,11 @@ class SessionSubjectIn(BaseModel):
         elif subject_type is SubjectType.url:
             if values.get("path") is None:
                 raise ValueError("Url assessments need a url")
-        elif subject_type is SubjectType.csh:
+        elif subject_type is SubjectType.hsh:
             for value in values.items():
                 print(value)
             if (values.get("metadata") is None):
-                raise ValueError("CSH assessments need a JSON object")
+                raise ValueError("HSH assessments need a JSON object")
         return subject_type
 
     def dict(self, **kwargs):
@@ -212,7 +212,7 @@ class SessionHandler:
         if not session.tasks:
             if self.user_input.subject_type in [SubjectType.file, SubjectType.url]: #url is currently not supported, thus this step wouldn't be reached for URL support
                 self.assessed_data = self.retrieve_data(self.user_input.path)
-            elif self.user_input.subject_type is SubjectType.csh:
+            elif self.user_input.subject_type is SubjectType.hsh:
                 self.assessed_data = self.user_input.metadata
                 self._build_tasks_dict(list(self.session_model.tasks.values()))
             self.create_tasks()
@@ -297,9 +297,9 @@ class SessionHandler:
         return cls(session)
 
     @classmethod
-    def from_csh(cls, session_id: str, session_data: SessionSubjectIn) -> "SessionHandler":
+    def from_hsh(cls, session_id: str, session_data: SessionSubjectIn) -> "SessionHandler":
         """
-        Creates a session based on A JSON from CSH
+        Creates a session based on A JSON from HSH
 
         :param session_id: The session identifier that will be used
         :param session_data:
@@ -485,8 +485,8 @@ class SessionHandler:
         """
         # filter fair_indicators for specific session subject
         print("checking here")
-        if self.user_input.subject_type is SubjectType.csh:
-            name_filter = 'CSH'
+        if self.user_input.subject_type is SubjectType.hsh:
+            name_filter = 'HSH'
         else:
             name_filter = 'CA'
         filter_indicators = {key: value for key, value in fair_indicators.items() if value.name.startswith(name_filter)}
@@ -531,8 +531,8 @@ class SessionHandler:
         if indicator in config.pmr_indicator_status and self.user_input.is_pmr:
             return TaskStatus(config.pmr_assessment_status[indicator]), True
         
-        if indicator in config.csh_metadata_status:
-            return TaskStatus(config.csh_metadata_status[indicator]), True
+        if indicator in config.hsh_metadata_status:
+            return TaskStatus(config.hsh_metadata_status[indicator]), True
 
         if indicator in config.assessment_dependencies:
             dependency_dict = config.assessment_dependencies[indicator]
@@ -636,7 +636,7 @@ class SessionHandler:
             task = self.session_model.get_task(task_id)
             
             if isinstance(task, AutomatedTask):
-                if self.user_input.subject_type is not SubjectType.csh:
+                if self.user_input.subject_type is not SubjectType.hsh:
                     task.do_evaluate(self.assessed_data.dict())
                 else:
                     task.do_evaluate(self.assessed_data)

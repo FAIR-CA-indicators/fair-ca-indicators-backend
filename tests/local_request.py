@@ -121,7 +121,7 @@ metadata = {
 }
 
 body = {
-    'subject_type': 'csh',  # Make sure subject_type is provided
+    'subject_type': 'hsh',  # Make sure subject_type is provided
     'metadata': json.dumps(metadata)
 }
 

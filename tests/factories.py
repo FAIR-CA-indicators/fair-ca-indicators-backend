@@ -58,12 +58,12 @@ class FileSessionSubjectFactory(factory.Factory):
         logger.warning(f"Setting session path to {filename}")
         return filename
 
-class CshSessionSubjectFactory(factory.Factory):
-    print("csh factory")
+class HSHSessionSubjectFactory(factory.Factory):
+    print("hsh factory")
     class Meta:
         model = SessionSubjectIn
     
-    subject_typ = "csh"
+    subject_typ = "hsh"
 
 class SessionFactory(factory.Factory):
     class Meta:

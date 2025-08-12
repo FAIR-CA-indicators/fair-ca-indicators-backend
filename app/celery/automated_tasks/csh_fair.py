@@ -3,7 +3,7 @@ import requests
 
 #from typing import Optional
 
-from .csh_helpers import check_route
+from .hsh_helpers import check_route, check_list, is_url_reachable
 from app.dependencies.settings import get_settings
 #from ... import models
 
@@ -24,7 +24,7 @@ def is_doi(identifier: str):
 
 def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: bool): ## shouldn't app.models.TaskStaus be used without ' ?
     import app.models #dynamic import
- 
+
     session_id = task_dict["session_id"]
     task_id = task_dict["id"]
 
@@ -64,7 +64,7 @@ def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: b
             # Optionally, raise the exception to propagate it further
             # raise
 
-    
+
     # Does not work because celery does not have access to fair_indicators
     # routers.update_task(session_id, task_id, status)
 
@@ -72,7 +72,7 @@ def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: b
     # redis_app.json().set(f"session:{session_id}", f".tasks.{task_id}.status", obj=result)
 
 @app.task
-def csh_f1_1_persistent_identifier(task_dict: dict, data: dict, test: bool = False):
+def hsh_f1_1_persistent_identifier(task_dict: dict, data: dict, test: bool = False):
     """
     check if metadata has: resource > identifier attribute
     """
@@ -83,10 +83,10 @@ def csh_f1_1_persistent_identifier(task_dict: dict, data: dict, test: bool = Fal
         result = False
 
     incoperate_results(task_dict, result, test)
-        
-    
+
+
 @app.task
-def csh_f1_2_globally_unique_identifier(task_dict: dict, data: dict, test: bool = False):
+def hsh_f1_2_globally_unique_identifier(task_dict: dict, data: dict, test: bool = False):
         """
         Representation of celery task to evaluate an assessment.
         These celery tasks should be in the format:
@@ -107,39 +107,37 @@ def csh_f1_2_globally_unique_identifier(task_dict: dict, data: dict, test: bool 
         :param task_dict: Task dict representation
         :param data: (Meta)Data to evaluate
         :return: None
+
+        Common schemes: DOI (is an implementation of Handle, the first part defines the namespace), arXiv (e.g. https://arxiv.org/abs/2404.00156), EISSN (electronic ISSN), Handle, ISTC (standard withdrawn), LISS, LSID (urn:lsid:⟨Authority⟩:⟨Namespace⟩:⟨ObjectID⟩[:⟨Version⟩]; unsure ), PMID, PURL, URN, w3id
         """
         identifier = check_route(data, ["resource", "resource_identifier"])
         print("grabbed identifier: ", identifier)
         #could also retrive "type" from data instead of using .startswith
         if(identifier is False):
             result = "failed"
-        elif(is_doi(identifier)): #TODO: extend by a DOI check when CSH starts supporting DOIs
+        elif(is_doi(identifier) and is_url_reachable("https://doi.org/" + identifier)):
             result = "success"
         elif(identifier.startswith("DRKS")) and is_url_reachable("https://drks.de/search/de/trial/" + identifier):
-            result = "success"    
+            result = "success"
+        elif(identifier.startswith("arxiv") and is_url_reachable("https://arxiv.org/abs/" + identifier)):
+            result = "success"
+        elif(identifier.startswith("lsid") or identifier.startswith("urn:lsid")):
+            if(identifier.startswith("lsid")):
+                identifier = "urn:" + identifier
+            if(is_url_reachable("http://www.lsid.info/" + identifier)):
+                result = "success"
+        elif(identifier.startswith("pmid") and is_url_reachable("https://pubmed.ncbi.nlm.nih.gov/") + identifier):
+            result = "sucess"
+        elif(is_url_reachable(identifier)):
+            result = "sucess"
         else:
             result = "failed"
-       
+
         incoperate_results(task_dict, result, test)
-
-        
-        def is_url_reachable(url):
-            try:
-                response = requests.head(url, timeout=5)  # Send a HEAD request to check if the server is reachable
-                return response.status_code < 400  # If the status code is less than 400, the URL is reachable
-            except requests.RequestException:
-                return False  # If any exception occurs (e.g., timeout), consider the URL unreachable
-
-        # Example usage:
-        url = "https://www.example.com"
-        if is_url_reachable(url):
-            print("URL is reachable")
-        else:
-            print("URL is not reachable")
 
 
 @app.task
-def csh_f2_rich_metadata_provided(task_dict: dict, data: dict, test: bool = False):
+def hsh_f2_rich_metadata_provided(task_dict: dict, data: dict, test: bool = False):
     """
     mandatory:
     resource.identifier
@@ -152,26 +150,67 @@ def csh_f2_rich_metadata_provided(task_dict: dict, data: dict, test: bool = Fals
 
     conditional:
     resource.nonStudyDetails
-    design 
+    design
     """
 
-    result = "success"
-    if check_route(data, ["resource", "identifier"]): result = False
-    if check_route(data, ["resource", "keywords"]): result = False
-    if check_route(data, ["resource", "descriptions", "language"]): result = False
-    if check_route(data, ["resource", "descriptions", "text"]): result = False
-    if check_route(data, ["resource", "contributors"]): result = False
-    if check_route(data, ["resource", "provenance"]): result = False
+
+    study_attributes = [
+        ["resource", "languages"],
+        ["resource", "webpage"],
+        ["resource", "nonStudyDetails", "version"],
+        ["resource", "nonStudyDetails", "format"],
+        ["resource", "contributors", "email"],
+        ["resource", "contributors", "affiliations", "address"],
+        ["resource", "contributors", "affiliations", "webpage"]
+    ]
+
+    document_attributes = [
+        ["resource", "languages"],
+        ["resource", "webpage"],
+        ["resource", "contributors", "email"],
+        ["resource", "contributors", "affiliations", "address"],
+        ["resource", "contributors", "affiliations", "webpage"],
+        ["design", "administrativeInformation", "ethicsCommitteeApproval"],
+        ["design", "administrativeInformation", "startDate"],
+        ["design", "dataSource", "general"],
+        ["design", "dataSource", "description"],
+        ["design", "primaryPurpose"],
+        ["design", "eligibilityCriteria", "genders"],
+        ["design", "eligibilityCriteria", "inclusionCriteria"],
+        ["design", "eligibilityCriteria", "exclusionCriteria"],
+        ["design", "population", "region"],
+        ["design", "population", "obtainedSampleSize"],
+        ["design", "interventions", "type"],
+        ["design", "interventions", "description"],
+        ["design", "dataSharingPlan", "description"],
+        ["design", "dataSharingPlan", "requestData"],
+        ["design", "dataSharingPlan", "url"],
+        ["design", "interventional", "masking", "general"],
+        ["design", "interventional", "masking", "description"]
+    ]
+
+    check = study_attributes
+    if("resource", "identifier", "classification".["type"] == "study"):
+        check = document_attributes
+
+    result = check_list(data, check)
+
+    # if check_route(data, ["resource", "identifier"]): result = False
+    # if check_route(data, ["resource", "keywords"]): result = False
+    # if check_route(data, ["resource", "descriptions", "language"]): result = False
+    # if check_route(data, ["resource", "descriptions", "text"]): result = False
+    # if check_route(data, ["resource", "contributors"]): result = False
+    # if check_route(data, ["resource", "provenance"]): result = False
 
     #TODO: handle conditional attributes; waiting for info
     incoperate_results(task_dict, result, test)
 
 @app.task
-def csh_f3_id_of_data_included(task_dict: dict, data: dict, test: bool = False):
+def hsh_f3_id_of_data_included(task_dict: dict, data: dict, test: bool = False):
     """
-    resource.ids.identifier 
-    resource.ids.scheme 
-    resource.ids.relationType 
+    resource.ids.identifier
+    resource.ids.scheme
+    resource.ids.relationType
 
     for each ressource id in resource.ids -> check if relationType is “A describes B” or “A is metadata for B”
     """
@@ -191,7 +230,7 @@ def csh_f3_id_of_data_included(task_dict: dict, data: dict, test: bool = False):
 
 
 # @app.task
-# def csh_f4_metadata_indexed(task_dict: dict, data: dict, test: bool = False):
+# def hsh_f4_metadata_indexed(task_dict: dict, data: dict, test: bool = False):
 #     """
 #     since the data is send to out tool as a json it clearly is indexed
 #     """
@@ -201,7 +240,7 @@ def csh_f3_id_of_data_included(task_dict: dict, data: dict, test: bool = False):
 #     incoperate_results(task_dict, result, test)
 
 @app.task
-def csh_a1_contains_access_information(task_dict: dict, data: dict, test: bool = False):
+def hsh_a1_contains_access_information(task_dict: dict, data: dict, test: bool = False):
     """
     1. check if there is a data sharing plan (study_data_sharing_plan_generally)
     2. if yes -> evaluate ‘study_data_sharing_plan_time_frame’ and ‘study_data_sharing_plan_access_criteria’ somehow
@@ -212,7 +251,6 @@ def csh_a1_contains_access_information(task_dict: dict, data: dict, test: bool =
     has_plan = general_plan == "Yes, there is a plan to make data available"
 
     if has_plan:
-        print("TODO: implent a check of the actual data sharing plan")
         result = "success"
     else:
         result = "failed"
@@ -220,47 +258,40 @@ def csh_a1_contains_access_information(task_dict: dict, data: dict, test: bool =
     incoperate_results(task_dict, result, test)
 
 @app.task
-def csh_a1_03_id_resolves_to_record(task_dict, result, test):
+def hsh_a1_03_id_resolves_to_record(task_dict, result, test):
     """ 1. build URL with base_url + ID
         2. somehow ping URL  """
     id = check_route(["resource", "identifier"])
-    url = "https://csh.nfdi4health.de/resource/" + id
+    url = "https://hsh.nfdi4health.de/resource/" + id
 
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code == 200:
-            print(f"The URL {url} resolves successfully.")
-            result = "success"
-        else:
-            print(f"The URL {url} returned status code {response.status_code}.")
-            result = "failed"
-    except requests.exceptions.RequestException as e:
-        print("An error occured on checking the URL")
+    if is_url_reachable(url):
+        result = "success"
+    else:
         result = "failed"
 
     incoperate_results(task_dict, result, test)
 
 
 @app.task
-def csh_i3_01_ref_other_metadata(task_dict: dict, data: dict, test: bool = False):
+def hsh_i3_01_ref_other_metadata(task_dict: dict, data: dict, test: bool = False):
     #check if other metadata is referenced
     ref_resources = check_route(data, ["resource", "ids"])
-    print("INFO - csh-i3-01")
     result = "not_applicable"
     if(ref_resources != False):
         print("IDs: ", ref_resources, type(ref_resources))
         for res in ref_resources:
             print(res, type(res))
-            print(res.get('typeGeneral'))
-            if(res.get('typeGeneral') != 'Dataset'):
+            print(res.get('relationType'))
+            if(res.get('relationType') != 'A continues B' or res.get('relationType') != 'A is continued by B'):
+                if (is_resolvable(res.get(identifier))) #############hier weiter
                 result = "success"
     incoperate_results(task_dict, result, test)
 
 @app.task
-def csh_i3_02_ref_other_data(task_dict: dict, data: dict, test: bool = False):
+def hsh_i3_02_ref_other_data(task_dict: dict, data: dict, test: bool = False):
     #check if other data is referenced
     ref_resources = check_route(data, ["resource", "ids"])
-    print("INFO - csh-i3-02")
+    print("INFO - hsh-i3-02")
     result = "not_applicable"
     if(ref_resources != False):
         for res in ref_resources:
@@ -271,10 +302,10 @@ def csh_i3_02_ref_other_data(task_dict: dict, data: dict, test: bool = False):
     incoperate_results(task_dict, result, test)
 
 @app.task
-def csh_i3_03_qual_ref_other_metadata(task_dict: dict, data: dict, test: bool = False):
+def hsh_i3_03_qual_ref_other_metadata(task_dict: dict, data: dict, test: bool = False):
     #check if other metadata is referenced
     ref_resources = check_route(data, ["resource", "ids"])
-    print("INFO - csh-i3-03")
+    print("INFO - hsh-i3-03")
     result = "not_applicable"
     if(ref_resources != False):
         for res in ref_resources:
@@ -288,10 +319,10 @@ def csh_i3_03_qual_ref_other_metadata(task_dict: dict, data: dict, test: bool = 
     incoperate_results(task_dict, result, test)
 
 @app.task
-def csh_i3_04_qual_ref_other_data(task_dict: dict, data: dict, test: bool = False):
+def hsh_i3_04_qual_ref_other_data(task_dict: dict, data: dict, test: bool = False):
     #check if other data is referenced
     ref_resources = check_route(data, ["resource", "ids"])
-    print("INFO - csh-i3-04")
+    print("INFO - hsh-i3-04")
     result = "not_applicable"
     if(ref_resources != False):
         for res in ref_resources:
@@ -305,7 +336,7 @@ def csh_i3_04_qual_ref_other_data(task_dict: dict, data: dict, test: bool = Fals
 
 ##### Reusability
 @app.task
-def csh_r1_1_01_has_reuse_license(task_dict: dict, data: dict, test: bool = False):
+def hsh_r1_1_01_has_reuse_license(task_dict: dict, data: dict, test: bool = False):
     print("CHECK! has reuse license")
     resource_type = check_route(data, ["resource", "classification", "type"])
     if(resource_type == False): resource_type = check_route(data, ["resource", "resource_classification", "resource_type"])
@@ -320,7 +351,7 @@ def csh_r1_1_01_has_reuse_license(task_dict: dict, data: dict, test: bool = Fals
     incoperate_results(task_dict, result, test)
 
 @app.task #TODO: verify if this automated task really works since it depends on a parent task
-def csh_r1_1_02_has_standard_reuse_license(task_dict: dict, data: dict, test: bool = False):
+def hsh_r1_1_02_has_standard_reuse_license(task_dict: dict, data: dict, test: bool = False):
     #check if userights label is a fitting license
     license_label  = check_route(data,["resource", "nonStudyDetails", "nonStudyDetails", "useRights", "label"])
     if(license_label in ["CC0 1.0 (Creative Commons Zero v1.0 Universal)", "CC BY 4.0 (Creative Commons Attribution 4.0 International)", "CC BY-NC 4.0 (Creative Commons Attribution Non Commercial 4.0 International)", "CC BY-SA 4.0 (Creative Commons Attribution Share Alike 4.0 International)", "CC BY-NC-SA 4.0 (Creative Commons Attribution Non Commercial Share Alike 4.0 International)"]):
@@ -332,7 +363,7 @@ def csh_r1_1_02_has_standard_reuse_license(task_dict: dict, data: dict, test: bo
     incoperate_results(task_dict, result, test)
 
 # Fitting licenses according to indicators: CC0 1.0, CC BY 4.0, CC BY-NC 4.0, CC BY-SA 4.0, CC BY-NC-SA 4.0
-""" Allowed values in CSH:
+""" Allowed values in HSH:
 CC0 1.0 (Creative Commons Zero v1.0 Universal)
 CC BY 4.0 (Creative Commons Attribution 4.0 International)
 CC BY-NC 4.0 (Creative Commons Attribution Non Commercial 4.0 International)
@@ -345,7 +376,7 @@ Not assigned
 Unknown
 """
 @app.task #TODO: verify if this automated task really works since it depends on a parent task
-def csh_r1_1_03_has_machine_readable_reuse_license(task_dict: dict, data: dict, test: bool = False):
+def hsh_r1_1_03_has_machine_readable_reuse_license(task_dict: dict, data: dict, test: bool = False):
     license_label  = check_route(data,["resource", "nonStudyDetails", "nonStudyDetails", "useRights", "label"])
     if(license_label in ["Creative Commons Zero v1.0 Universal", "Creative Commons Attribution 4.0 International", "Creative Commons Attribution Non Commercial 4.0 International", "Creative Commons Attribution Share Alike 4.0 International", "Creative Commons Attribution Non Commercial Share Alike 4.0 International"]):
         result = "success"
@@ -354,7 +385,7 @@ def csh_r1_1_03_has_machine_readable_reuse_license(task_dict: dict, data: dict, 
     incoperate_results(task_dict, result, test)
 
 @app.task
-def csh_r1_2_01_has_provenance_information(task_dict: dict, data: dict, test: bool = False):
+def hsh_r1_2_01_has_provenance_information(task_dict: dict, data: dict, test: bool = False):
     provenance_info = check_route(data, ["resource", "provenance"])
     if(provenance_info):
         if(provenance_info.get("verificationDate") and provenance_info.get("dataSource") and provenance_info.get("firstSubmittedDate") and provenance_info.get("lastUpdatePostedDate")):
@@ -365,7 +396,7 @@ def csh_r1_2_01_has_provenance_information(task_dict: dict, data: dict, test: bo
 
 # currently the same as the attribute before according to the indicators doc
 @app.task
-def csh_r1_2_02_has_standardized_provenance_information(task_dict: dict, data: dict, test: bool = False):
+def hsh_r1_2_02_has_standardized_provenance_information(task_dict: dict, data: dict, test: bool = False):
     provenance_info = check_route(data, ["resource", "provenance"])
     if(provenance_info):
         if(provenance_info.get("verificationDate") and provenance_info.get("dataSource") and provenance_info.get("firstSubmittedDate") and provenance_info.get("lastUpdatePostedDate")):
@@ -373,10 +404,11 @@ def csh_r1_2_02_has_standardized_provenance_information(task_dict: dict, data: d
         else:
             result = "failed"
         incoperate_results(task_dict, result, test)
-                           
+
 
 #@app.task   ## implicit pass according to indicators doc
-#def csh_r1_3_01_metadata_standardized(task_dict: dict, data: dict, test: bool = False):
+#def hsh_r1_3_01_metadata_standardized(task_dict: dict, data: dict, test: bool = False):
 
 #@app.task   ## implicit pass according to indicators doc
-#def csh_r1_3_02_metadata_stadardized_machine_readable(task_dict: dict, data: dict, test: bool = False):
+#def hsh_r1_3_02_metadata_stadardized_machine_readable(task_dict: dict, data: dict, test: bool = False):
+
