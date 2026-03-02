@@ -53,7 +53,7 @@ class SubjectType(str, Enum):
     - *url*: The archive/model to evaluate is at a specific url
     - *file*: The archive/model file is directly provided by the user
     - *manual*: No file is provided, the user will assess themselves the archive/model
-    - *hsh* A JSON is provided, containing metadata from a Central Study Hub 
+    - *hsh* A JSON is provided, containing metadata from a Central Study Hub
     """
 
     url = "url"
@@ -120,8 +120,8 @@ class SessionSubjectIn(BaseModel):
             if values.get("path") is None:
                 raise ValueError("Url assessments need a url")
         elif subject_type is SubjectType.hsh:
-            for value in values.items():
-                print(value)
+            #for value in values.items():
+            #    print(value, "SubjectType.hsh")
             if (values.get("metadata") is None):
                 raise ValueError("HSH assessments need a JSON object")
         return subject_type
@@ -248,7 +248,7 @@ class SessionHandler:
             print(session.status)
             print("^!!^")
             n += 1 """
-        
+
         return cls(session)
 
     @classmethod
@@ -308,7 +308,7 @@ class SessionHandler:
 
 
         session = Session(id=session_id, session_subject=session_data)
-        
+
         print(session.id)
 
         return cls(session)
@@ -378,9 +378,6 @@ class SessionHandler:
         print("Trying to update SCORE. Is session running? ", self.is_running())
         if not self.is_running():
             self.session_model.status = SessionStatus.finished
-        else:
-            print("HAE?")
-
 
         all_tasks = [
             self.session_model.get_task(task_key)
@@ -530,7 +527,7 @@ class SessionHandler:
 
         if indicator in config.pmr_indicator_status and self.user_input.is_pmr:
             return TaskStatus(config.pmr_assessment_status[indicator]), True
-        
+
         if indicator in config.hsh_metadata_status:
             return TaskStatus(config.hsh_metadata_status[indicator]), True
 
@@ -634,13 +631,13 @@ class SessionHandler:
         print(">>>>>>>start_automated_tasks<<<<<<<<<<<")
         for task_id in self.indicator_tasks.values():
             task = self.session_model.get_task(task_id)
-            
+
             if isinstance(task, AutomatedTask):
                 if self.user_input.subject_type is not SubjectType.hsh:
                     task.do_evaluate(self.assessed_data.dict())
                 else:
                     task.do_evaluate(self.assessed_data)
-            
+
     def json(self):
         """Returns the json representation of the session model"""
         return self.session_model.json()

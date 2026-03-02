@@ -82,7 +82,7 @@ async def create_session(
             session_handler = SessionHandler.from_hsh(session_id, subject)
             #session_handler.get(timeout=5)
         else:
-            session_handler = SessionHandler.from_user_input(session_id, subject) 
+            session_handler = SessionHandler.from_user_input(session_id, subject)
     except ValueError as e:
         raise HTTPException(422, str(e))
     try:
@@ -91,7 +91,7 @@ async def create_session(
             "$",
             obj=session_handler.session_model.dict(),
         )
-        
+
         if subject.subject_type is not SubjectType.hsh:
             session_handler.start_automated_tasks()
         else:
@@ -99,8 +99,8 @@ async def create_session(
             await async_tasks
             await asyncio.sleep(2)
             print("done with ASYNC TASK")
-                        
-                
+
+
     except TypeError as e:
         print(session_handler.session_model)
         print(session_handler.session_model.dict())
@@ -113,11 +113,11 @@ async def create_session(
                 subject = s_json.pop("session_subject")
                 s = Session(**s_json, session_subject=subject)
                 return s
-        
+
         except ResponseError as e:
             print(f"An error occurred in Redis: {str(e)}")
             raise HTTPException(status_code=404, detail="No session with this id was found")
-       
+
     return session_handler.session_model
 
 

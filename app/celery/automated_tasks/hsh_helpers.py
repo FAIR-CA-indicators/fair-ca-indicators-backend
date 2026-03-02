@@ -1,4 +1,5 @@
 import json
+import requests
 
 def check_route(metadata, route_keys):
     current_position = json.loads(metadata)
@@ -19,9 +20,10 @@ def check_list(data, checks):
     return True
 
 def is_url_reachable(url):
-            try:
-                response = requests.head(url, timeout=5)  # Send a HEAD request to check if the server is reachable
-                return response.status_code < 400  # If the status code is less than 400, the URL is reachable
-            except requests.RequestException:
-                return False  # If any exception occurs (e.g., timeout), consider the URL unreachable
+    try:
+        response = requests.head(url, timeout=5)  # Send a HEAD request to check if the server is reachable
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ", response.status_code)
+        return response.status_code < 400  # If the status code is less than 400, the URL is reachable
+    except requests.RequestException:
+        return False  # If any exception occurs (e.g., timeout), consider the URL unreachable
 
