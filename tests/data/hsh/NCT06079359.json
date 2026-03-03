@@ -1,0 +1,263 @@
+{
+  "collections": [
+    {
+      "alias": "Individual_Studies",
+      "id": 5,
+      "name": "Individual Studies"
+    }
+  ],
+  "host_collection": {
+    "alias": "CTgov",
+    "name": "CT.gov"
+  },
+  "link": null,
+  "linked_collections": [
+    {
+      "alias": "Individual_Studies",
+      "id": 5,
+      "name": "Individual Studies"
+    }
+  ],
+  "permissions": {
+    "edit": false,
+    "publish": false,
+    "viewDraft": false
+  },
+  "resource": {
+    "acronyms": [
+      {
+        "language": "EN (English)",
+        "text": "MULBERRY"
+      }
+    ],
+    "classification": {
+      "type": "Study"
+    },
+    "contributors": [
+      {
+        "nameType": "Personal",
+        "personal": {
+          "familyName": "-",
+          "givenName": "-",
+          "type": "Sponsor (primary)"
+        }
+      },
+      {
+        "nameType": "Organisational",
+        "organisational": {
+          "name": "Alexion Pharmaceuticals, Inc.",
+          "type": "Sponsor (primary)"
+        }
+      },
+      {
+        "email": "clinicaltrials@alexion.com",
+        "nameType": "Organisational",
+        "organisational": {
+          "name": "Alexion Pharmaceuticals, Inc. (Sponsor)",
+          "type": "Contact"
+        },
+        "phone": "1-855-752-2356"
+      }
+    ],
+    "descriptions": [
+      {
+        "language": "EN (English)",
+        "text": "No Summary provided."
+      }
+    ],
+    "design": {
+      "administrativeInformation": {
+        "endDate": "2027-08-20",
+        "startDate": "2024-05-14",
+        "status": "Ongoing (I): Recruitment ongoing, but data collection not yet started"
+      },
+      "arms": [
+        {
+          "description": "Starting at Day 1 of the Randomized Evaluation Period, the ALXN1850 group will receive bodyweight dependent doses of either 20mg, 35mg or 50mg of ALXN1850 once every 2 weeks (q2w) via SC injection, for 24 weeks. Participants will enter the OLE Period and continue q2w dosing with ALXN1850 for up to 132 weeks.",
+          "label": "ALXN1850",
+          "type": "Other"
+        },
+        {
+          "description": "Starting at Day 1 during the Randomized Evaluation Period, participants will receive placebo q2w for a total of 24 weeks. Participants will enter the OLE Period and continue q2w dosing with ALXN1850 for up to 132 weeks.",
+          "label": "Placebo",
+          "type": "Other"
+        }
+      ],
+      "centers": "Multicentric",
+      "centersNumber": 61,
+      "comment": "Are healthy volunteers permitted to participate in the clinical study?: No\nIs eligibility based on gender (not on sex)?: \nAdditional information about gender eligibility criteria:",
+      "conditions": [
+        {
+          "classification": "Free text",
+          "label": "Hypophosphatasia"
+        }
+      ],
+      "dataSharingPlan": {
+        "description": "Alexion has a public commitment to allow requests for access to study data and will be supplying a protocol, CSR, and plain language summaries.",
+        "generally": "Yes, there is a plan to make data available",
+        "supportingInformation": [
+          "Study protocol"
+        ]
+      },
+      "eligibilityCriteria": {
+        "ageMax": {
+          "number": 11,
+          "timeUnit": "Years"
+        },
+        "ageMin": {
+          "number": 2,
+          "timeUnit": "Years"
+        },
+        "exclusionCriteria": "History or presence of cardiovascular, respiratory, hepatic, renal, gastrointestinal, endocrinological, hematological, neurological disorders, or any other disorders that are capable of significantly altering the absorption, metabolism, or elimination of drugs; constituting a risk when taking the study intervention; or interfering with the interpretation of data as determined by the Investigator\n\nDiagnosis of primary or secondary hyperparathyroidism\n\nHypoparathyroidism, unless secondary to HPP\n\nAny new fracture within 12 weeks before Day 1 (excluding pseudofractures)\n\nPlanned surgical intervention which may impact the results of study assessments (in the opinion of the Investigator) during the Randomized Evaluation Period\n\nHistory of allergy or hypersensitivity to any ingredient contained in ALXN1850 or the placebo comparator",
+        "genders": [
+          "Diverse",
+          "Female",
+          "Male"
+        ],
+        "inclusionCriteria": "Diagnosis of HPP documented in the medical records, and the following criteria fulfilled during the Screening Period without other probable cause than HPP:\n\nPresence of HPP-related rickets on skeletal X-rays, with a minimum Rickets Severity Score (RSS) of 1.0 AND\n\nSerum ALP activity below the age- and sex-adjusted normal range\n\nMust meet 1 of the following criteria:\n\nDocumented ALPL gene variant (pathogenic, likely pathogenic, or variant of unknown significance) from a Clinical Laboratory Improvement Amendments (CLIA) certified laboratory (Section 8.7)\n\nPlasma PLP above the upper limit of normal (ULN) during the Screening Period (central or local laboratory results allowed per local regulations)\n\nTanner stage 2 or less during the Screening Period"
+      },
+      "groupsOfDiseases": {
+        "generally": [
+          "Unknown"
+        ]
+      },
+      "interventional": {
+        "allocation": "Randomized",
+        "masking": {
+          "description": "double-blinded",
+          "roles": [
+            "Care provider",
+            "Investigator",
+            "Outcomes assessor",
+            "Participant"
+          ]
+        },
+        "phase": "Phase-3"
+      },
+      "interventions": [
+        {
+          "description": "Participants will receive a ALXN1850 via subcutaneous (SC) injection.",
+          "name": "ALXN1850"
+        },
+        {
+          "description": "Participants will receive placebo via SC injection.",
+          "name": "Placebo"
+        }
+      ],
+      "outcomes": [
+        {
+          "timeFrame": "Day 169",
+          "title": "Radiographic Global Impression of Change (RGI-C) Score at the end of the Randomized Evaluation Period (Day 169)",
+          "type": "Primary"
+        },
+        {
+          "timeFrame": "Baseline, Day 169",
+          "title": "Change from Baseline in Rickets Severity Score (RSS) at the end of the Randomized Evaluation Period (Day 169)",
+          "type": "Secondary"
+        },
+        {
+          "timeFrame": "Baseline, Day 169",
+          "title": "Change from Baseline in 6-Minute Walk Test (6MWT) at the end of the Randomized Evaluation Period (Day 169)",
+          "type": "Secondary"
+        },
+        {
+          "timeFrame": "Baseline, Day 169",
+          "title": "Change from Baseline in Percent Predicted 6MWT at the end of the Randomized Evaluation Period (Day 169)",
+          "type": "Secondary"
+        },
+        {
+          "timeFrame": "Baseline, Day 169",
+          "title": "Change from Baseline in Bruininks Oseretsky Test of Motor Proficiency, Second Edition (BOT2) Score at the end of the Randomized Evaluation Period (Day 169)",
+          "type": "Secondary"
+        },
+        {
+          "timeFrame": "Baseline, Day 169",
+          "title": "Change from Baseline in Peabody Developmental Motor Scales, Third Edition (PDMS-3) Score at the end of the Randomized Evaluation Period (Day 169)",
+          "type": "Secondary"
+        },
+        {
+          "timeFrame": "Day 169",
+          "title": "RGI-C Responder at the end of the Randomized Evaluation Period (Day 169)",
+          "type": "Secondary"
+        }
+      ],
+      "population": {
+        "countries": [
+          "Argentina",
+          "Australia",
+          "Belgium",
+          "Brazil",
+          "Canada",
+          "China",
+          "France",
+          "Germany",
+          "Israel",
+          "Italy",
+          "Korea, Republic of",
+          "Mexico",
+          "Poland",
+          "Spain",
+          "Sweden",
+          "Thailand"
+        ],
+        "obtainedSampleSize": 30,
+        "targetSampleSize": 30
+      },
+      "primaryDesign": "Interventional",
+      "primaryPurpose": "Treatment",
+      "studyType": {
+        "interventional": [
+          "Other"
+        ]
+      },
+      "subject": "Person"
+    },
+    "identifier": "NCT06079359",
+    "idsAlternative": [
+      {
+        "identifier": "NCT06079359",
+        "scheme": "NCT (ClinicalTrials.gov)"
+      },
+      {
+        "identifier": "D8590C00003",
+        "scheme": "Other"
+      },
+      {
+        "identifier": "ALXN1850-HPP-305",
+        "scheme": "Other"
+      }
+    ],
+    "keywords": [
+      {
+        "label": "Hypophosphatasia"
+      },
+      {
+        "label": "ALXN1850"
+      },
+      {
+        "label": "HPP"
+      }
+    ],
+    "provenance": {
+      "dataSource": "Automatically uploaded: ClinicalTrials.gov",
+      "lastUpdatePostedDate": "2024-07-29T13:24:20Z",
+      "lastUpdateSubmittedUser": "NFDI4Health <fb.studyhub@nfdi4health.de>"
+    },
+    "titles": [
+      {
+        "language": "EN (English)",
+        "text": "A Phase 3, Randomized, Double-blinded, Placebo-controlled, Multicenter Study to Evaluate Efficacy and Safety of ALXN1850 Versus Placebo Administered Subcutaneously in Pediatric (2 to < 12 Years of Age) Participants With Hypophosphatasia Who Have Not Received Previous Treatment With Asfotase Alfa"
+      }
+    ]
+  },
+  "versions": [
+    {
+      "create_timestamp": "2024-07-29T09:28:31Z",
+      "id": 14493,
+      "last_update_timestamp": "2024-07-29T13:24:20Z",
+      "name": "1.0",
+      "release_timestamp": "2024-07-29T13:24:20Z",
+      "status": "published"
+    }
+  ]
+}

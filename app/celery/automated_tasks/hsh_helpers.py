@@ -16,7 +16,6 @@ def check_route(metadata, route_keys):
 def check_list(data, checks):
     for attr in checks:
         if not check_route(data, attr): return False
-
     return True
 
 def is_url_reachable(url):

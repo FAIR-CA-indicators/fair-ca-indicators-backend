@@ -192,7 +192,7 @@ if mode == "hsh_api":
     md = get_metadata(id)
     check_hsh_metadata(md)
 elif mode == "local":
-  with open('tests/data/hsh/t2.json', 'r') as file:
+  with open('tests/data/hsh/t3.json', 'r') as file:
     data = json.load(file)
 
   check_hsh_metadata(data)

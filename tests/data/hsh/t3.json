@@ -1,0 +1,51 @@
+{
+    "resource": {
+        "identifier": "NCT06079359",
+        "classification": {
+            "type": "Study"
+        },
+        "webpage": "https://example.com",
+        "contributors": {
+            "email": "contact@example.com",
+            "affiliations": {
+                "address": "123 Main St, Berlin",
+                "webpage": "https://university.edu"
+            }
+        }
+  },
+  "design": {
+    "administrativeInformation": {
+      "ethicsCommitteeApproval": "approved",
+      "startDate": "2024-01-15"
+    },
+    "dataSource": {
+      "general": "registry",
+      "description": "Patient records from clinical registry"
+    },
+    "primaryPurpose": "treatment",
+    "eligibilityCriteria": {
+      "genders": "all",
+      "inclusionCriteria": "Age 18+, diagnosed with condition X",
+      "exclusionCriteria": "Pregnant women, prior surgery"
+    },
+    "population": {
+      "region": "Europe",
+      "obtainedSampleSize": 250
+    },
+    "interventions": {
+      "type": "drug",
+      "description": "Daily oral administration of compound A"
+    },
+    "dataSharingPlan": {
+      "description": "Data available upon request after study completion",
+      "requestData": true,
+      "url": "https://data.example.com/request"
+    },
+    "interventional": {
+      "masking": {
+        "general": "double-blind",
+        "description": "Neither participants nor investigators know group assignments"
+      }
+    }
+  }
+}
