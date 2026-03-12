@@ -4,8 +4,14 @@ import requests
 def check_route(metadata, route_keys):
     current_position = json.loads(metadata)
     for key in route_keys:
+        print(key + "-->" + str(type(current_position)))
         if key in current_position:
             current_position = current_position[key]
+        elif isinstance(current_position, list):
+            print("LIST FOUND!!!!!")
+            if key in current_position[0]:
+                print("INSIDE!!!!!!!!")
+                current_position = current_position[0][key]
         else:
             print("the key {} form the route{} is not in the dict".format(key, route_keys), )
             #if a key is missing return false

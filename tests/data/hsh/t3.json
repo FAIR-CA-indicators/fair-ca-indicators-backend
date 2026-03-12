@@ -19,6 +19,21 @@
       "version": "1",
       "format": "Some format"
     },
+    "keywords": [
+      {
+        "label": "list",
+        "code": "12345"
+      },
+      {
+        "label": "of",
+        "code": "546"
+      },
+      {
+        "label": "keys",
+        "code": "12345789"
+      }
+    ],
+
     "ids": [
       {
         "identifier": "10.4126/FRL01-006431467",
@@ -30,6 +45,17 @@
         "scheme": "DOI",
         "relationType": "A continues B"
 
+      },
+      {
+        "identifier": "10.4126/FRL01-006431467",
+        "scheme": "DOI",
+        "relationType": "A cites B"
+      }
+    ],
+    "descriptions": [
+      {
+        "lagnuage": "EN",
+        "text": "some text of text"
       }
     ],
     "design": {
@@ -37,7 +63,9 @@
         "generally": "Yes, there is a plan to make data available",
         "requestData": "string",
         "url": "string"
-      }
-    }
+      },
+      "primaryDesign": "Non-interventional"
+    },
+    "provenance": "some provenance info"
   }
 }
