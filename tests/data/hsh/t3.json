@@ -69,7 +69,12 @@
         "text": "some text of text"
       }
     ],
-    "provenance": "some provenance info"
+    "provenance": {
+      "verificationDate": "01-01-20220",
+      "dataSource": "some source",
+      "firstSubmittedDate": "01-01-2019",
+      "lastUpdatePostedDate": "31-12-2019"
+    }
   },
   "design": {
       "dataSharingPlan": {
