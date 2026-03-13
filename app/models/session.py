@@ -629,14 +629,23 @@ class SessionHandler:
     async def start_automated_tasks(self):
         """Starts the assessment of automated tasks"""
         print(">>>>>>>start_automated_tasks<<<<<<<<<<<")
-        for task_id in self.indicator_tasks.values():
-            task = self.session_model.get_task(task_id)
 
-            if isinstance(task, AutomatedTask):
+        def run_task(task):
+            if isinstance(task, AutomatedTask) and task.status is TaskStatus.queued:
                 if self.user_input.subject_type is not SubjectType.hsh:
                     task.do_evaluate(self.assessed_data.dict())
                 else:
                     task.do_evaluate(self.assessed_data)
+
+            # Only recurse into children after parent is evaluated
+            for child in task.children.values():
+                # Re-evaluate child's default status now that parent has run
+                self.update_task_children(task.id)
+                run_task(child)
+
+        for task_id in self.indicator_tasks.values():
+            task = self.session_model.get_task(task_id)
+            run_task(task)
 
     def json(self):
         """Returns the json representation of the session model"""

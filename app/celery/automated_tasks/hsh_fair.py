@@ -374,7 +374,6 @@ def hsh_r1_1_plurality_of_attributes(task_dict: dict, data: dict, test: bool = F
     result = "success"
     for attr in attribute_list:
         if not check_route(data, attr):
-            print("MISSING attribute: ", attr)
             result = "failed"
     incoperate_results(task_dict, result, test)
 
@@ -389,10 +388,11 @@ def hsh_r1_1_01_has_reuse_license(task_dict: dict, data: dict, test: bool = Fals
 
 @app.task #TODO: verify if this automated task really works since it depends on a parent task
 def hsh_r1_1_02_has_standard_reuse_license(task_dict: dict, data: dict, test: bool = False):
+    print("INDICATOR RUNNING")
     #check if userights label is a fitting license
-    license_label = check_route(data,["resource", "nonStudyDetails", "nonStudyDetails", "useRights", "label"])
+    license_label = check_route(data,["resource", "nonStudyDetails", "useRights", "label"])
     license_link = check_route(data, ["resource", "nonStudyDetails", "useRights", "link"])
-    if(license_label in ["CC0 1.0 (Creative Commons Zero v1.0 Universal)", "CC BY 4.0 (Creative Commons Attribution 4.0 International)", "CC BY-NC 4.0 (Creative Commons Attribution Non Commercial 4.0 International)", "CC BY-SA 4.0 (Creative Commons Attribution Share Alike 4.0 International)", "CC BY-NC-SA 4.0 (Creative Commons Attribution Non Commercial Share Alike 4.0 International)"] and license_link):
+    if(license_label in ("CC0 1.0 (Creative Commons Zero v1.0 Universal)", "CC BY 4.0 (Creative Commons Attribution 4.0 International)", "CC BY-NC 4.0 (Creative Commons Attribution Non Commercial 4.0 International)", "CC BY-SA 4.0 (Creative Commons Attribution Share Alike 4.0 International)", "CC BY-NC-SA 4.0 (Creative Commons Attribution Non Commercial Share Alike 4.0 International)") and license_link):
         result = "success"
     #elif(license_label == "Other"): # not in the doc
     #    result = "warning"

@@ -17,7 +17,18 @@
     ],
     "nonStudyDetails": {
       "version": "1",
-      "format": "Some format"
+      "format": "Some format",
+      "useRights": {
+        "label": "CC BY 4.0 (Creative Commons Attribution 4.0 International)",
+        "link": "URL.to.some.place",
+        "confirmations": {
+          "authority": "true",
+          "terms": "true",
+          "irrevocability": "true",
+          "supportByLicensing": "false"
+        },
+        "description": "description of use rights"
+      }
     },
     "keywords": [
       {
@@ -58,14 +69,14 @@
         "text": "some text of text"
       }
     ],
-    "design": {
+    "provenance": "some provenance info"
+  },
+  "design": {
       "dataSharingPlan": {
         "generally": "Yes, there is a plan to make data available",
         "requestData": "string",
         "url": "string"
       },
       "primaryDesign": "Non-interventional"
-    },
-    "provenance": "some provenance info"
-  }
+    }
 }

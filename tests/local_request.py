@@ -156,8 +156,12 @@ def check_hsh_metadata(metadata):
 
     if(response.json()['status'] != 'finished'):
       tasks = response_update.json()['tasks']
-    for values in tasks.values():
-      print(values['name'], ":  ", values['status'])
+    for task in tasks.values():
+      print(task['name'], ":  ", task['status'])
+      if task['children']:
+        for child in task['children'].values():
+          print(child['name'], ":  ", child['status'])
+      #print(task)
 
       #response = requests.get(url + '/' +  response.json()['id'], )
       #print(response.json())
