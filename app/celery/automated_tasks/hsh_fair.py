@@ -41,6 +41,8 @@ def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: b
         print(f"--Patching {url}", status.dict())
         try:
             # Send PATCH request
+            print(f"Patching task {task_dict['id']} with status {status.dict()}")
+            print(f"Task dict keys: {task_dict.keys()}")
             response = requests.patch(
                 url,
                 json=status.dict(),
@@ -434,24 +436,19 @@ def hsh_r1_2_01_has_provenance_information(task_dict: dict, data: dict, test: bo
 # currently the same as the attribute before according to the indicators doc
 @app.task
 def hsh_r1_2_02_has_standardized_provenance_information(task_dict: dict, data: dict, test: bool = False):
-    #provenance_info = check_route(data, ["resource", "provenance"])
-    #if(provenance_info):
-    #    if(provenance_info.get("verificationDate") and provenance_info.get("dataSource") and provenance_info.get("firstSubmittedDate") and provenance_info.get("lastUpdatePostedDate")):
-    #        result = "success"
-    #    else:
-    #        result = "failed"
+
     result = "warnings" # the evaluation requires a PROV-O validator. No further information in the document
     incoperate_results(task_dict, result, test)
 
-@app.task
-def hsh_r1_3_01_metadata_complies_community_standards(task_dict: dict, data: dict, test: bool = False):
-    result = "warnings" # incomplete description
-    incoperate_results(task_dict, result, test)
+#@app.task
+#def hsh_r1_3_01_complies_with_community_standard(task_dict: dict, data: dict, test: bool = False):
+#    result = "warnings" # incomplete description
+#    incoperate_results(task_dict, result, test)
 
-@app.task
-def hsh_r1_3_02_metadata_machine_readable_community_standards(task_dict: dict, data: dict, test: bool = False):
-    result = "warnings" # incomplete description
-    incoperate_results(task_dict, result, test)
+#@app.task
+#def hsh_r1_3_02_complies_with_machine_readable_community_standard(task_dict: dict, data: dict, test: bool = False):
+#    result = "warnings" # incomplete description
+#    incoperate_results(task_dict, result, test)
 
 #@app.task   ## implicit pass according to indicators doc
 #def hsh_r1_3_01_metadata_standardized(task_dict: dict, data: dict, test: bool = False):

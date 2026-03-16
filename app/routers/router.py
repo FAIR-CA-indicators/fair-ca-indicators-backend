@@ -3,7 +3,7 @@ import uuid
 import os
 from shutil import copyfileobj
 from app.models.session import SessionStatus
-from fastapi import APIRouter, HTTPException, UploadFile, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, Depends, BackgroundTasks
 from typing import List, Optional
 from redis.exceptions import ResponseError
 #import asyncio
@@ -239,7 +239,7 @@ def indicator_description(name: str) -> Indicator:
 
 @base_router.patch("/session/{session_id}/tasks/{task_id}", tags=["Tasks"])
 async def update_task(
-    session_id: str, task_id: str, task_status: TaskStatusIn
+    session_id: str, task_id: str, task_status: TaskStatusIn, background_tasks: BackgroundTasks
 ) -> Session:
     """
     Edit the status of a Task to the given TaskStatus and recalculate the
@@ -260,6 +260,7 @@ async def update_task(
     :param force: Force the task status update even if task is disabled
     :return: The whole session.
     """
+
     config = get_settings()
     redis_app.locks[session_id].acquire(timeout=60)
 
@@ -287,10 +288,8 @@ async def update_task(
     ):
         task.disabled = False
     task.status = task_status.status
-
-    handler.update_task_children(task_id)
+    handler.update_task_children(task_id)  # no longer dispatches
     handler.update_session_data()
-
     try:
         redis_app.json().set(f"session:{session_id}", ".", handler.session_model.dict())
     except ResponseError as e:
@@ -299,4 +298,5 @@ async def update_task(
     finally:
         redis_app.locks[session_id].release()
 
+    background_tasks.add_task(handler.dispatch_enabled_children, task_id)
     return handler.session_model

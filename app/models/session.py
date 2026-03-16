@@ -564,6 +564,8 @@ class SessionHandler:
         task_id = str(uuid4())
         config = get_settings()
 
+        default_status, default_disabled = self._get_default_task_status(indicator.name)
+
         is_task_automated = (
             self.user_input.subject_type is not SubjectType.manual
             and indicator.name in config.automated_assessments
@@ -602,11 +604,10 @@ class SessionHandler:
         else:
             self.session_model.add_task(task)
 
-        default_status, default_disabled = self._get_default_task_status(indicator.name)
         task.status = default_status
         if default_status != TaskStatus.queued:
             task.automated = True
-        task.disabled = isinstance(task, AutomatedTask) or default_disabled
+        task.disabled = default_disabled
 
         return task
 
@@ -620,32 +621,46 @@ class SessionHandler:
         :return: None
         """
         task = self.session_model.get_task(task_key)
-
         for child in task.children.values():
             default_status, default_disabled = self._get_default_task_status(child.name)
             child.status = default_status
+            if default_status != TaskStatus.queued:
+                child.automated = True
             child.disabled = default_disabled
 
     async def start_automated_tasks(self):
         """Starts the assessment of automated tasks"""
         print(">>>>>>>start_automated_tasks<<<<<<<<<<<")
-
         def run_task(task):
-            if isinstance(task, AutomatedTask) and task.status is TaskStatus.queued:
+            if isinstance(task, AutomatedTask) and task.status is TaskStatus.queued and not task.disabled:
                 if self.user_input.subject_type is not SubjectType.hsh:
                     task.do_evaluate(self.assessed_data.dict())
                 else:
                     task.do_evaluate(self.assessed_data)
-
-            # Only recurse into children after parent is evaluated
+                # Don't recurse — children will be dispatched by dispatch_enabled_children
+                # when this task completes and PATCHes back
+                return
             for child in task.children.values():
-                # Re-evaluate child's default status now that parent has run
                 self.update_task_children(task.id)
                 run_task(child)
-
         for task_id in self.indicator_tasks.values():
             task = self.session_model.get_task(task_id)
             run_task(task)
+
+    def dispatch_enabled_children(self, task_key: str) -> None:
+        # Ensure assessed_data is available even when loaded from existing session
+        if self.assessed_data is None:
+            if self.user_input.subject_type is SubjectType.hsh:
+                self.assessed_data = self.user_input.metadata
+            # Add other subject types here if needed
+
+        task = self.session_model.get_task(task_key)
+        for child in task.children.values():
+            if isinstance(child, AutomatedTask) and not child.disabled and child.status is TaskStatus.queued:
+                if self.user_input.subject_type is not SubjectType.hsh:
+                    child.do_evaluate(self.assessed_data.dict())
+                else:
+                    child.do_evaluate(self.assessed_data)
 
     def json(self):
         """Returns the json representation of the session model"""

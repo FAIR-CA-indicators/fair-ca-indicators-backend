@@ -1,6 +1,6 @@
-from pydantic import BaseModel, validator, root_validator
+from pydantic import BaseModel, Field, validator, root_validator
 from enum import Enum
-from typing import Optional, Dict
+from typing import Literal, Union, Annotated, Optional, Dict
 from fastapi import HTTPException
 
 from app.metrics.assessments_lifespan import fair_indicators
@@ -69,6 +69,8 @@ class Task(BaseModel):
     - *score*: 1 if Task status is **success**, 0 if **failed**, 0.5 if **warnings**, null otherwise.
     """
 
+    type: Literal["task"] = "task"
+
     id: str
     name: str
     session_id: str  # Needs a validator (https://docs.pydantic.dev/usage/validators/)? This must be a valid id
@@ -117,7 +119,7 @@ class Task(BaseModel):
         :return: The valid assessment name
         """
         #filter indicators according to subject
-        
+
         if name not in fair_indicators:
             raise ValueError(f"Given assessment name {name} is not a known indicator")
         return name
@@ -152,6 +154,8 @@ class Task(BaseModel):
             and self.status != TaskStatus.not_answered
             and self.status != TaskStatus.error
         )
+
+    children: Dict[str, "AnyTask"] = {}
 
 
 class Indicator(BaseModel):
@@ -269,6 +273,7 @@ class IndicatorDependency:
 
 
 class AutomatedTask(Task):
+    type: Literal["automated_task"] = "automated_task"
     task_method: str
     automated: bool = True
 
@@ -285,3 +290,9 @@ class AutomatedTask(Task):
             raise ValueError(f"Task method {self.task_method} was not found")
 
         celery_task.delay(self.dict(), data)
+
+
+AnyTask = Annotated[Union[AutomatedTask, Task], Field(discriminator="type")]
+
+Task.update_forward_refs()
+AutomatedTask.update_forward_refs()

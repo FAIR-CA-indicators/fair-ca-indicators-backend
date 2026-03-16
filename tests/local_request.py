@@ -139,8 +139,7 @@ def check_hsh_metadata(metadata):
   if response.status_code == 200:
     print("Request was successful.")
     tasks = response.json()['tasks']
-    for values in tasks.values():
-      print(values['name'], ":  ", values['status'])
+
     print('status: ', response.json()['status'])
 
     count = 0
@@ -150,6 +149,7 @@ def check_hsh_metadata(metadata):
       print("not finished!")
       response_update = requests.get(url + '/' +  session_id, )
       status = response_update.json()['status']
+      print('status: ', status)
       count += 1
 
 
@@ -201,5 +201,5 @@ elif mode == "local":
 
   check_hsh_metadata(data)
 
-  print(json.dumps(data, indent=4))
+  #print(json.dumps(data, indent=4))
 
