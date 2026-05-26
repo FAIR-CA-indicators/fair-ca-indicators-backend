@@ -1,13 +1,53 @@
 import requests
 import json
 import time
+import pandas as pd
 
 print("TESTING THE SERVER")
 
 
+def getIds(nPages, nPerPage, rType):
+
+  url = "https://health-study-hub.de/api/resources/"
+  all_ids = []
+  page = 0
+
+  while page < nPages:
+      payload = {
+              "q": "*",               # match everything
+              "perPage": nPerPage,
+              "start": page,
+              "sortField": "date",
+              "sortOrder": "asc",
+              "showFacets": False,
+              "fq": "resource_type:" + rType,  # Solr-style facet filter
+          }
+
+      resp = requests.post(url, json={
+          "type": "Study",
+          "size": 1,
+          "page": page
+      })
+      data = resp.json()
+
+      # Extract IDs — adjust key names based on actual response
+      items = data.get("content", data.get("hits", data.get("results", [])))
+      if not items:
+          break
+
+      for item in items:
+          #print(item)
+          all_ids.append(item.get("resource").get("identifier"))
+
+      page += 1
+
+  print(f"Found {len(all_ids)} study IDs")
+  print(all_ids)
+  return all_ids
+
 def check_hsh_metadata(metadata):
 
-
+  print("check")
   # metadata that will be used for development
   metadata_test = {
     "link": {
@@ -145,7 +185,7 @@ def check_hsh_metadata(metadata):
     count = 0
     while status != 'finished' and count < 2:
       print(count)
-      time.sleep(3)
+      time.sleep(2)
       print("not finished!")
       response_update = requests.get(url + '/' +  session_id, )
       status = response_update.json()['status']
@@ -156,11 +196,15 @@ def check_hsh_metadata(metadata):
 
     if(response.json()['status'] != 'finished'):
       tasks = response_update.json()['tasks']
+
+    row = {}
     for task in tasks.values():
       print(task['name'], ":  ", task['status'])
+      row[task['name']] = task['status']
       if task['children']:
         for child in task['children'].values():
           print(child['name'], ":  ", child['status'])
+          row[child['name']] = child['status']
       #print(task)
 
       #response = requests.get(url + '/' +  response.json()['id'], )
@@ -169,11 +213,13 @@ def check_hsh_metadata(metadata):
       print("Request failed with status code:", response.status_code)
       print(response.text)
 
+  return row
 
 def get_metadata(hsh_id):
   hsh_url = 'https://health-study-hub.de/api/resource/'
   #NCT06079359
 
+  print('-------------------------------------------------------------------')
   print("HSH ID: ", hsh_id)
   response = requests.get(hsh_url + hsh_id)
 
@@ -185,16 +231,23 @@ def get_metadata(hsh_id):
 
   # Define the URL of the local server
 url = 'http://localhost:8000/session'
+#url = "https://health-study-hub.de/api/resources/"
+
+print('-----IDs-----')
+hshIds = getIds(1, 2, 'Study')
+print('----END------')
 
 
 ids = ['NCT06079359', 'DRKS00010675']
-mode = "local"
+mode = "hsh_api"
 
 if mode == "hsh_api":
-  for id in ids:
-    overall_scores = {}
+  df = pd.DataFrame()
+  for id in hshIds:
     md = get_metadata(id)
-    check_hsh_metadata(md)
+    mdScore = check_hsh_metadata(md)
+    df = pd.concat([df, pd.DataFrame([mdScore])], ignore_index=True)
+  df.to_excel("output.xlsx", index=False)
 elif mode == "local":
   with open('tests/data/hsh/t3.json', 'r') as file:
     data = json.load(file)
