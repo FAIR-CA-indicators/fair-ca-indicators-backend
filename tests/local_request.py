@@ -6,44 +6,50 @@ import pandas as pd
 print("TESTING THE SERVER")
 
 
-def getIds(nPages, nPerPage, rType):
+def getMetadataItems(page, nPerPage, rType):
 
   url = "https://health-study-hub.de/api/resources/"
   all_ids = []
-  page = 0
+  payload = {
+      "q": "*",
+      "perPage": nPerPage,
+      "start": page * nPerPage,
+      "sortField": "date",
+      "sortOrder": "desc",
+      "showFacets": False,
+      "fq": "*"
+  }
+  resp = requests.post(url, json=payload)
 
-  while page < nPages:
-      payload = {
-              "q": "*",               # match everything
-              "perPage": nPerPage,
-              "start": page,
-              "sortField": "date",
-              "sortOrder": "asc",
-              "showFacets": False,
-              "fq": "resource_type:" + rType,  # Solr-style facet filter
-          }
+  if resp.status_code != 200:
+      print(f"Error: HTTP {resp.status_code} - {resp.text}")
+      return
 
-      resp = requests.post(url, json={
-          "type": "Study",
-          "size": 1,
-          "page": page
-      })
+  try:
       data = resp.json()
+  except requests.exceptions.JSONDecodeError:
+      print(f"Error: Response is not valid JSON - {resp.text[:500]}")
+      return
 
-      # Extract IDs — adjust key names based on actual response
-      items = data.get("content", data.get("hits", data.get("results", [])))
-      if not items:
-          break
+  items = data.get("content", data.get("hits", data.get("results", [])))
+  if not items:
+      print(f"No items found. Response keys: {data.keys()}")
+      return
 
-      for item in items:
-          #print(item)
-          all_ids.append(item.get("resource").get("identifier"))
-
-      page += 1
+  for item in items:
+      resource = item.get("resource")
+      if not resource:
+          print(f"Warning: Missing 'resource' in item: {item.keys()}")
+          continue
+      identifier = resource.get("identifier")
+      if not identifier:
+          print(f"Warning: Missing 'identifier' in resource: {resource.keys()}")
+          continue
+      all_ids.append(identifier)
 
   print(f"Found {len(all_ids)} study IDs")
   print(all_ids)
-  return all_ids
+  return items
 
 def check_hsh_metadata(metadata):
 
@@ -198,13 +204,18 @@ def check_hsh_metadata(metadata):
       tasks = response_update.json()['tasks']
 
     row = {}
+    print(metadata["resource"]["classification"]["type"])
+    row["identifier"] = metadata["resource"]["identifier"]
+    row["type"] = metadata["resource"]["classification"]["type"]
+    mapping = {"success": 1, "failed": 0, "warnings": 0.5, "not_applicable": -1}
+
     for task in tasks.values():
-      print(task['name'], ":  ", task['status'])
-      row[task['name']] = task['status']
+      #print(task['name'], ":  ", task['status'])
+      row[task['name']] = mapping[task['status']]
       if task['children']:
         for child in task['children'].values():
-          print(child['name'], ":  ", child['status'])
-          row[child['name']] = child['status']
+          #print(child['name'], ":  ", child['status'])
+          row[child['name']] = mapping[child['status']]
       #print(task)
 
       #response = requests.get(url + '/' +  response.json()['id'], )
@@ -214,6 +225,7 @@ def check_hsh_metadata(metadata):
       print(response.text)
 
   return row
+
 
 def get_metadata(hsh_id):
   hsh_url = 'https://health-study-hub.de/api/resource/'
@@ -233,21 +245,35 @@ def get_metadata(hsh_id):
 url = 'http://localhost:8000/session'
 #url = "https://health-study-hub.de/api/resources/"
 
-print('-----IDs-----')
-hshIds = getIds(1, 2, 'Study')
-print('----END------')
 
 
-ids = ['NCT06079359', 'DRKS00010675']
+
+#ids = ['NCT06079359', 'DRKS00010675']
 mode = "hsh_api"
 
+
 if mode == "hsh_api":
+  max = 2000
+  perPage = 5
+  currentPage = 0
   df = pd.DataFrame()
-  for id in hshIds:
-    md = get_metadata(id)
-    mdScore = check_hsh_metadata(md)
-    df = pd.concat([df, pd.DataFrame([mdScore])], ignore_index=True)
+
+  while currentPage * perPage <=  max:
+    print('-----Getting metadata items-----')
+    mdItems = getMetadataItems(currentPage, perPage, 'Study')
+    print('-----Got items------')
+
+    for item in mdItems:
+      #md = get_metadata(id) # avoid calling twice for the MD just because we want the ID before
+
+      mdScore = check_hsh_metadata(item)
+      df = pd.concat([df, pd.DataFrame([mdScore])], ignore_index=True)
+    currentPage += 1
+    if(currentPage * perPage % 50 == 0):
+      df.to_excel("save_between.xlsx")
+
   df.to_excel("output.xlsx", index=False)
+
 elif mode == "local":
   with open('tests/data/hsh/t3.json', 'r') as file:
     data = json.load(file)
