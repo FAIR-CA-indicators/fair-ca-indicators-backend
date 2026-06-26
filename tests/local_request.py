@@ -11,7 +11,7 @@ def getMetadataItems(page, nPerPage, rType):
   url = "https://health-study-hub.de/api/resources/"
   all_ids = []
   payload = {
-      "q": "*",
+      "q": "resource.classification.type:\"" + rType + "\"",
       "perPage": nPerPage,
       "start": page * nPerPage,
       "sortField": "date",
@@ -254,13 +254,17 @@ mode = "hsh_api"
 
 if mode == "hsh_api":
   max = 2000
-  perPage = 5
+  perPage = 20
   currentPage = 0
+  metadataType = "Study"
   df = pd.DataFrame()
 
   while currentPage * perPage <=  max:
     print('-----Getting metadata items-----')
-    mdItems = getMetadataItems(currentPage, perPage, 'Study')
+    mdItems = getMetadataItems(currentPage, perPage, metadataType)
+    if mdItems is None:
+      break #end loop if no mdItems are found or left
+
     print('-----Got items------')
 
     for item in mdItems:

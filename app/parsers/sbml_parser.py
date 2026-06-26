@@ -26,7 +26,7 @@ class SbmlModel(ModelObject):
                 for i in range(self.content.getNumErrors())
             ]
             raise IOError(
-                f"Error(s) occurred while reading the model file: \n{error_log}"
+                f"Error(s) occurred while reading the model (SBML) file: \n{error_log}"
             )
 
         self.namespaces = dict(
