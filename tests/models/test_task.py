@@ -1,3 +1,5 @@
+from csv import DictReader
+
 import pytest
 
 from pydantic import ValidationError
@@ -32,11 +34,7 @@ def test_task_validation_make_score(status):
 # Needs to be async to access fair_indicators global object
 def test_task_validation_valid_name():
     with open("app/metrics/metrics.csv", "r") as metrics_file:
-        indicators = [
-            line.split(",")[0].strip('"') for line in metrics_file.readlines()
-        ]
-
-    indicators = indicators[1:]  # Dropping column name
+        indicators = [line["TaskName"] for line in DictReader(metrics_file, dialect="unix")]
 
     for indicator in indicators:
         TaskFactory(name=indicator)

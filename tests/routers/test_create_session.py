@@ -3,7 +3,7 @@ import pytest
 from app.models import Session, SessionHandler
 from app.dependencies.settings import get_settings
 
-from tests.factories import ManualSessionSubjectFactory
+from tests.factories import ManualSessionSubjectFactory, ManualHSHSessionSubjectFactory
 
 
 def test_create_session_manual_session(test_client, redis_client):
@@ -55,3 +55,25 @@ def test_create_repository_based_session(repo, test_client, redis_client):
         task = s.get_task(task_key)
 
         assert task.status == expected_status
+
+
+def _all_task_dicts(tasks):
+    for task in tasks:
+        yield task
+        yield from _all_task_dicts(task.get("children", {}).values())
+
+
+def test_create_session_manual_hsh_session(test_client, redis_client):
+    user_input = ManualHSHSessionSubjectFactory()
+    input_json = user_input.dict()
+    input_json["subject_type"] = input_json["subject_type"].value
+
+    res = test_client.post("/session", data=input_json)
+    assert res.status_code == 200
+
+    session_data = res.json()
+    assert session_data["tasks"] != {}
+
+    for task in _all_task_dicts(session_data["tasks"].values()):
+        assert task["name"].startswith("HSH")
+        assert task["type"] == "task"

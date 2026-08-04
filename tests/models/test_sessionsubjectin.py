@@ -68,3 +68,26 @@ def test_session_subject_in_validation_url():
 
     with pytest.raises(ValidationError):
         SessionSubjectIn(**json_data)
+
+
+def test_session_subject_in_validation_hsh():
+    json_data = {
+        "subject_type": "hsh",
+        "metadata": {"resource": {"identifier": "test"}},
+    }
+
+    SessionSubjectIn(**json_data)
+    json_data.pop("metadata")
+
+    with pytest.raises(ValidationError):
+        SessionSubjectIn(**json_data)
+
+
+def test_session_subject_in_validation_hsh_manual_skips_metadata_requirement():
+    json_data = {
+        "subject_type": "hsh",
+        "is_manual": True,
+    }
+
+    subject = SessionSubjectIn(**json_data)
+    assert subject.metadata is None

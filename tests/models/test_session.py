@@ -1,4 +1,7 @@
+from csv import DictReader
+
 from app.models import (
+    AutomatedTask,
     Session,
     SessionHandler,
     SessionStatus,
@@ -9,6 +12,7 @@ from app.dependencies.settings import get_settings
 
 from tests.factories import (
     ManualSessionSubjectFactory,
+    ManualHSHSessionSubjectFactory,
     TaskFactory,
     SessionFactory,
     IndicatorFactory,
@@ -223,10 +227,14 @@ def test_session_handler_default_task_status():
 # Definitely needs to be async to access fair_indicators global object
 def test_session_handler_create_tasks():
     # Will fail if metrics changes format
-    metrics_file = open(get_settings().indicators_path, "r")
-    indicators = [line.split(",")[0].strip('"') for line in metrics_file.readlines()]
-    metrics_file.close()
-    indicators = indicators[1:]  # Dropping column name
+    # ManualSessionSubjectFactory is not an HSH subject, so only CA-prefixed
+    # indicators are created for it (see SessionHandler.create_tasks)
+    with open(get_settings().indicators_path, "r") as metrics_file:
+        indicators = [
+            line["TaskName"]
+            for line in DictReader(metrics_file, dialect="unix")
+            if line["TaskName"].startswith("CA")
+        ]
 
     user_input = ManualSessionSubjectFactory()
     id = "test-session"
@@ -251,6 +259,83 @@ def test_session_handler_update_task_children():
     assert parent_task.status == TaskStatus.queued
 
     child_name = "CA-RDA-I3-02Archive"
+    child_id = sh.get_task_from_indicator(child_name)
+    child_task = sh.session_model.get_task(child_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+    parent_task.status = TaskStatus.failed
+    sh.update_task_children(parent_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.failed
+
+    parent_task.status = TaskStatus.success
+    sh.update_task_children(parent_id)
+    assert not child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+
+def _all_tasks(tasks):
+    for task in tasks:
+        yield task
+        yield from _all_tasks(task.children.values())
+
+
+def test_session_handler_create_tasks_manual_hsh():
+    with open(get_settings().indicators_path, "r") as metrics_file:
+        indicators = [
+            line["TaskName"]
+            for line in DictReader(metrics_file, dialect="unix")
+            if line["TaskName"].startswith("HSH")
+        ]
+
+    user_input = ManualHSHSessionSubjectFactory()
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
+    assert sh.session_model.tasks != {}
+
+    for indicator in indicators:
+        assert indicator in sh.indicator_tasks
+        task_key = sh.get_task_from_indicator(indicator)
+        assert sh.session_model.get_task(task_key) is not None
+
+    for task in _all_tasks(sh.session_model.tasks.values()):
+        assert not isinstance(task, AutomatedTask)
+
+
+def test_session_handler_default_task_status_manual_hsh():
+    # HSH-RDA-F1-01M is normally forced to a fixed status via hsh_metadata_status
+    # and would also be run as an AutomatedTask via automated_assessments.
+    task_name = "HSH-RDA-F1-01M"
+
+    user_input = ManualHSHSessionSubjectFactory()
+    session = SessionFactory(session_subject=user_input)
+    task = TaskFactory(session_id=session.id)
+    session.add_task(task)
+
+    sh = SessionHandler.from_existing_session(session)
+
+    default_status, default_disabled = sh._get_default_task_status(task_name)
+    assert default_status == TaskStatus.queued
+    assert not default_disabled
+
+    new_task = sh._create_task(IndicatorFactory(name=task_name))
+    assert not isinstance(new_task, AutomatedTask)
+    assert new_task.status == TaskStatus.queued
+    assert not new_task.disabled
+
+
+def test_session_handler_update_task_children_manual_hsh():
+    user_input = ManualHSHSessionSubjectFactory()
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
+
+    parent_name = "HSH-RDA-R1.1-01M"
+    parent_id = sh.get_task_from_indicator(parent_name)
+    parent_task = sh.session_model.get_task(parent_id)
+    assert parent_task.status == TaskStatus.queued
+
+    child_name = "HSH-RDA-R1.1-02M"
     child_id = sh.get_task_from_indicator(child_name)
     child_task = sh.session_model.get_task(child_id)
     assert child_task.disabled

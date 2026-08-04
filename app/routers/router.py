@@ -73,7 +73,7 @@ async def create_session(
         finally:
             uploaded_file.file.close()
     elif subject.subject_type is SubjectType.hsh:
-        if subject.metadata is None:
+        if not subject.is_manual and subject.metadata is None:
             raise HTTPException(
                 422, "No JSON object was attached for assessment. Impossible to process query"
             )
@@ -92,7 +92,7 @@ async def create_session(
             obj=session_handler.session_model.dict(),
         )
 
-        if subject.subject_type is not SubjectType.hsh:
+        if subject.subject_type is not SubjectType.hsh or subject.is_manual:
             session_handler.start_automated_tasks()
         else:
             async_tasks = session_handler.start_automated_tasks()

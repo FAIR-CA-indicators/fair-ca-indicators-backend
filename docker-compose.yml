@@ -1,14 +1,15 @@
-version: '3'
 services:
   backend:
     build:
       context: .
       target: main
     container_name: "faircombine-backend"
+    restart: unless-stopped
     ports:
       - "8000:80"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - ./app:/faircombine/app
       - ./session_files:/faircombine/session_files
@@ -17,6 +18,12 @@ services:
     image: redis/redis-stack-server:latest
     command: redis-stack-server --save "60 1"
     container_name: "faircombine-redis"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     expose:
       - "6379"
     ports:
@@ -29,8 +36,12 @@ services:
       context: .
       target: celery
     depends_on:
-      - backend
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
     container_name: "faircombine-celery"
+    restart: unless-stopped
     command: celery -A app.celery.celery_app worker -l INFO
     volumes:
       - ./app:/faircombine/app

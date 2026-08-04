@@ -82,8 +82,12 @@ class SessionSubjectIn(BaseModel):
         *subject_type* is **manual**)
     - *is_biomodel*: Whether the model comes from BioModel (required attribute if *subject_type* is **manual**)
     - *is_pmr*: Whether the model comes from PMR (required attribute if *subject_type* is **manual**)
-    - *subject_type*: See SubjectType model
     - *metadata*: metadata from HSH
+    - *is_manual*: When True, no automated/forced task statuses are applied for the resource type: every
+        task is left in a queued, enabled state (subject to indicator dependency chains) for the user to
+        answer by hand via `PATCH /session/{id}/tasks/{task_id}`. Currently only meaningful combined with
+        *subject_type* **hsh**.
+    - *subject_type*: See SubjectType model
     """
 
     path: Union[HttpUrl, FileUrl, FilePath, None] = None
@@ -98,6 +102,7 @@ class SessionSubjectIn(BaseModel):
     is_pmr: Optional[bool]
     random: Optional[bool]
     metadata: object
+    is_manual: bool = False
     subject_type: SubjectType
 
 
@@ -120,9 +125,7 @@ class SessionSubjectIn(BaseModel):
             if values.get("path") is None:
                 raise ValueError("Url assessments need a url")
         elif subject_type is SubjectType.hsh:
-            #for value in values.items():
-            #    print(value, "SubjectType.hsh")
-            if (values.get("metadata") is None):
+            if not values.get("is_manual") and values.get("metadata") is None:
                 raise ValueError("HSH assessments need a JSON object")
         return subject_type
 
@@ -511,25 +514,26 @@ class SessionHandler:
         second being a boolean about whether the Task should be disabled or not
         """
         config = get_settings()
-        if (
-            indicator in config.archive_indicators and not self.user_input.has_archive
-        ) or (
-            indicator in config.archive_metadata_indicators
-            and not self.user_input.has_archive_metadata
-        ):
-            return TaskStatus.failed, True
+        if not self.user_input.is_manual:
+            if (
+                indicator in config.archive_indicators and not self.user_input.has_archive
+            ) or (
+                indicator in config.archive_metadata_indicators
+                and not self.user_input.has_archive_metadata
+            ):
+                return TaskStatus.failed, True
 
-        if (
-            indicator in config.biomodel_assessment_status
-            and self.user_input.is_biomodel
-        ):
-            return TaskStatus(config.biomodel_assessment_status[indicator]), True
+            if (
+                indicator in config.biomodel_assessment_status
+                and self.user_input.is_biomodel
+            ):
+                return TaskStatus(config.biomodel_assessment_status[indicator]), True
 
-        if indicator in config.pmr_indicator_status and self.user_input.is_pmr:
-            return TaskStatus(config.pmr_assessment_status[indicator]), True
+            if indicator in config.pmr_indicator_status and self.user_input.is_pmr:
+                return TaskStatus(config.pmr_assessment_status[indicator]), True
 
-        if indicator in config.hsh_metadata_status:
-            return TaskStatus(config.hsh_metadata_status[indicator]), True
+            if indicator in config.hsh_metadata_status:
+                return TaskStatus(config.hsh_metadata_status[indicator]), True
 
         if indicator in config.assessment_dependencies:
             dependency_dict = config.assessment_dependencies[indicator]
@@ -568,6 +572,7 @@ class SessionHandler:
 
         is_task_automated = (
             self.user_input.subject_type is not SubjectType.manual
+            and not self.user_input.is_manual
             and indicator.name in config.automated_assessments
         )
         task = (

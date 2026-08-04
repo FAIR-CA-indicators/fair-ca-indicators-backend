@@ -62,8 +62,15 @@ class HSHSessionSubjectFactory(factory.Factory):
     print("hsh factory")
     class Meta:
         model = SessionSubjectIn
-    
-    subject_typ = "hsh"
+
+    subject_type = "hsh"
+    metadata = factory.LazyFunction(lambda: {"resource": {"identifier": "test"}})
+
+
+class ManualHSHSessionSubjectFactory(HSHSessionSubjectFactory):
+    is_manual = True
+    metadata = None
+
 
 class SessionFactory(factory.Factory):
     class Meta:
