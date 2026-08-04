@@ -3,7 +3,12 @@ import pytest
 from app.models import Session, SessionHandler
 from app.dependencies.settings import get_settings
 
-from tests.factories import ManualSessionSubjectFactory, ManualHSHSessionSubjectFactory
+from tests.factories import (
+    ManualSessionSubjectFactory,
+    UrlSessionSubjectFactory,
+    HSHSessionSubjectFactory,
+    ManualHSHSessionSubjectFactory,
+)
 
 
 def test_create_session_manual_session(test_client, redis_client):
@@ -77,3 +82,34 @@ def test_create_session_manual_hsh_session(test_client, redis_client):
     for task in _all_task_dicts(session_data["tasks"].values()):
         assert task["name"].startswith("HSH")
         assert task["type"] == "task"
+
+
+def test_create_session_hsh_manual_false_requires_metadata(test_client, redis_client):
+    # Build a valid (non-manual) HSH subject, then strip metadata from the raw
+    # payload to confirm the server-side validation still requires it when
+    # is_manual is left at its default (False). Also a regression check for the
+    # as_form decorator: a pydantic ValidationError raised while resolving the
+    # `subject` Depends() used to escape as an uncaught 500 instead of a 422.
+    user_input = HSHSessionSubjectFactory()
+    input_json = user_input.dict()
+    input_json["subject_type"] = input_json["subject_type"].value
+    input_json.pop("metadata", None)
+    input_json.pop("is_manual", None)
+
+    res = test_client.post("/session", data=input_json)
+    assert res.status_code == 422
+    detail = res.json()["detail"]
+    assert any(e["loc"] == ["subject_type"] for e in detail)
+
+
+def test_create_session_url_requires_path(test_client, redis_client):
+    # Same as_form decorator regression check as above, for the url branch.
+    user_input = UrlSessionSubjectFactory()
+    input_json = user_input.dict()
+    input_json["subject_type"] = input_json["subject_type"].value
+    input_json.pop("path", None)
+
+    res = test_client.post("/session", data=input_json)
+    assert res.status_code == 422
+    detail = res.json()["detail"]
+    assert any(e["loc"] == ["subject_type"] for e in detail)
