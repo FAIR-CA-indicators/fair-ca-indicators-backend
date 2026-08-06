@@ -325,6 +325,37 @@ def test_session_handler_default_task_status_manual_hsh():
     assert not new_task.disabled
 
 
+def test_session_handler_create_task_creates_missing_dependency_parent():
+    # Regression test: _create_task must be able to create a dependency's
+    # parent Task on the fly when that parent has not been created yet,
+    # instead of crashing (see the assessment_dependencies-based recursion
+    # in _create_task).
+    child_name = "HSH-RDA-I3-03M"
+    parent_name = "HSH-RDA-I3-01M"
+
+    user_input = ManualHSHSessionSubjectFactory()
+    session = SessionFactory(session_subject=user_input)
+
+    # Create an unrelated initial task so the handler doesn't auto-create
+    # every task, leaving indicator_tasks without parent_name.
+    task = TaskFactory(session_id=session.id)
+    session.add_task(task)
+
+    sh = SessionHandler.from_existing_session(session)
+    assert parent_name not in sh.indicator_tasks
+
+    child_task = sh._create_task(IndicatorFactory(name=child_name))
+
+    assert child_task.name == child_name
+    assert child_task.disabled
+
+    assert parent_name in sh.indicator_tasks
+    parent_task = sh.session_model.get_task(sh.indicator_tasks[parent_name])
+    assert parent_task is not None
+    assert parent_task.name == parent_name
+    assert parent_task.get_task_child(child_task.id) is not None
+
+
 def test_session_handler_update_task_children_manual_hsh():
     user_input = ManualHSHSessionSubjectFactory()
     id = "test-session"
@@ -350,6 +381,121 @@ def test_session_handler_update_task_children_manual_hsh():
     sh.update_task_children(parent_id)
     assert not child_task.disabled
     assert child_task.status == TaskStatus.queued
+
+
+def test_session_handler_update_task_children_manual_hsh_i3():
+    user_input = ManualHSHSessionSubjectFactory()
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
+
+    parent_name = "HSH-RDA-I3-01M"
+    parent_id = sh.get_task_from_indicator(parent_name)
+    parent_task = sh.session_model.get_task(parent_id)
+    assert parent_task.status == TaskStatus.queued
+
+    child_name = "HSH-RDA-I3-03M"
+    child_id = sh.get_task_from_indicator(child_name)
+    child_task = sh.session_model.get_task(child_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+    parent_task.status = TaskStatus.failed
+    sh.update_task_children(parent_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.failed
+
+    parent_task.status = TaskStatus.success
+    sh.update_task_children(parent_id)
+    assert not child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+
+def test_session_handler_update_task_children_manual_hsh_r13():
+    user_input = ManualHSHSessionSubjectFactory()
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
+
+    parent_name = "HSH-RDA-R1.3-01M"
+    parent_id = sh.get_task_from_indicator(parent_name)
+    parent_task = sh.session_model.get_task(parent_id)
+    assert parent_task.status == TaskStatus.queued
+
+    child_name = "HSH-RDA-R1.3-02M"
+    child_id = sh.get_task_from_indicator(child_name)
+    child_task = sh.session_model.get_task(child_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+    parent_task.status = TaskStatus.failed
+    sh.update_task_children(parent_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.failed
+
+    parent_task.status = TaskStatus.success
+    sh.update_task_children(parent_id)
+    assert not child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+
+def test_session_handler_update_task_children_ca_r13():
+    user_input = ManualSessionSubjectFactory(has_archive=True)
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
+
+    parent_name = "CA-RDA-R1.3-01Archive"
+    parent_id = sh.get_task_from_indicator(parent_name)
+    parent_task = sh.session_model.get_task(parent_id)
+    assert parent_task.status == TaskStatus.queued
+
+    child_name = "CA-RDA-R1.3-02Archive"
+    child_id = sh.get_task_from_indicator(child_name)
+    child_task = sh.session_model.get_task(child_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+    parent_task.status = TaskStatus.failed
+    sh.update_task_children(parent_id)
+    assert child_task.disabled
+    assert child_task.status == TaskStatus.failed
+
+    parent_task.status = TaskStatus.success
+    sh.update_task_children(parent_id)
+    assert not child_task.disabled
+    assert child_task.status == TaskStatus.queued
+
+
+def test_session_handler_update_task_children_ca_r11_mm():
+    user_input = ManualSessionSubjectFactory()
+    id = "test-session"
+    sh = SessionHandler.from_user_input(id, user_input)
+
+    parent_name = "CA-RDA-R1.1-01MM"
+    parent_id = sh.get_task_from_indicator(parent_name)
+    parent_task = sh.session_model.get_task(parent_id)
+    assert parent_task.status == TaskStatus.queued
+    assert not parent_task.disabled
+
+    for child_name in ("CA-RDA-R1.1-02MM", "CA-RDA-R1.1-03MM"):
+        child_id = sh.get_task_from_indicator(child_name)
+        child_task = sh.session_model.get_task(child_id)
+        assert child_task.disabled
+        assert child_task.status == TaskStatus.queued
+
+    parent_task.status = TaskStatus.failed
+    sh.update_task_children(parent_id)
+    for child_name in ("CA-RDA-R1.1-02MM", "CA-RDA-R1.1-03MM"):
+        child_id = sh.get_task_from_indicator(child_name)
+        child_task = sh.session_model.get_task(child_id)
+        assert child_task.disabled
+        assert child_task.status == TaskStatus.failed
+
+    parent_task.status = TaskStatus.success
+    sh.update_task_children(parent_id)
+    for child_name in ("CA-RDA-R1.1-02MM", "CA-RDA-R1.1-03MM"):
+        child_id = sh.get_task_from_indicator(child_name)
+        child_task = sh.session_model.get_task(child_id)
+        assert not child_task.disabled
+        assert child_task.status == TaskStatus.queued
 
 
 # TODO Not implemented yet

@@ -568,6 +568,16 @@ class SessionHandler:
         task_id = str(uuid4())
         config = get_settings()
 
+        # Dependency parents must exist before computing this indicator's default
+        # status, since _get_default_task_status inspects the parent Tasks.
+        task_dependencies = config.assessment_dependencies.get(indicator.name)
+        if task_dependencies is not None:
+            for parent_indicator in task_dependencies["indicators"]:
+                # FIXME: This will cause issues if a Task has multiple parents
+                if parent_indicator not in self.indicator_tasks:
+                    parent_task = self._create_task(fair_indicators[parent_indicator])
+                    self.indicator_tasks[parent_indicator] = parent_task.id
+
         default_status, default_disabled = self._get_default_task_status(indicator.name)
 
         is_task_automated = (
@@ -592,20 +602,10 @@ class SessionHandler:
             )
         )
 
-        task_dependencies = config.assessment_dependencies.get(indicator.name)
         if task_dependencies is not None:
             for parent_indicator in task_dependencies["indicators"]:
-                # If parent exists, no need to create it
-                # FIXME: This will cause issues if a Task has multiple parents
-                if parent_indicator in self.indicator_tasks:
-                    parent_key = self.get_task_from_indicator(parent_indicator)
-                    self.session_model.add_task(task, parent_key)
-
-                else:
-                    parent_task = self._create_task(parent_indicator)
-                    self.indicator_tasks[parent_indicator] = parent_task.id
-                    self.session_model.add_task(task, parent_task.id)
-
+                parent_key = self.get_task_from_indicator(parent_indicator)
+                self.session_model.add_task(task, parent_key)
         else:
             self.session_model.add_task(task)
 
