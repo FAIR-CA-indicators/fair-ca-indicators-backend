@@ -61,7 +61,7 @@ def f4_model_metadata_harvestable(
         print(f"Patching {url}")
         requests.patch(
             url,
-            json=status.dict(),
+            json=status.model_dump(),
         )
 
     # Does not work because celery does not have access to fair_indicators

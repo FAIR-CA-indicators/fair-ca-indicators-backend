@@ -89,7 +89,7 @@ async def create_session(
         redis_app.json().set(
             f"session:{session_handler.session_model.id}",
             "$",
-            obj=session_handler.session_model.dict(),
+            obj=session_handler.session_model.model_dump(),
         )
 
         if subject.subject_type is not SubjectType.hsh or subject.is_manual:
@@ -103,7 +103,7 @@ async def create_session(
 
     except TypeError as e:
         print(session_handler.session_model)
-        print(session_handler.session_model.dict())
+        print(session_handler.session_model.model_dump())
         raise e
 
     if subject.subject_type is SubjectType.hsh:
@@ -149,7 +149,7 @@ def load_session(session: Session) -> Session:
 
     else:
         # TODO: Add checks regarding tasks and session status
-        redis_app.json().set(f"session:{session.id}", "$", obj=session.dict())
+        redis_app.json().set(f"session:{session.id}", "$", obj=session.model_dump())
         return session
 
 
@@ -291,7 +291,7 @@ async def update_task(
     handler.update_task_children(task_id)  # no longer dispatches
     handler.update_session_data()
     try:
-        redis_app.json().set(f"session:{session_id}", ".", handler.session_model.dict())
+        redis_app.json().set(f"session:{session_id}", ".", handler.session_model.model_dump())
     except ResponseError as e:
         print(f"An error occurred in Redis: {str(e)}")
         raise HTTPException(status_code=404, detail="No task with this id was found")

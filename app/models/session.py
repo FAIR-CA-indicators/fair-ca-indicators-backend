@@ -2,7 +2,15 @@ import asyncio
 from uuid import uuid4
 
 import requests
-from pydantic import BaseModel, HttpUrl, FileUrl, FilePath, validator, ValidationError
+from pydantic import (
+    BaseModel,
+    HttpUrl,
+    FileUrl,
+    FilePath,
+    field_validator,
+    ValidationError,
+    ValidationInfo,
+)
 from typing import Union, Optional
 from enum import Enum
 #import asyncio
@@ -91,23 +99,25 @@ class SessionSubjectIn(BaseModel):
     """
 
     path: Union[HttpUrl, FileUrl, FilePath, None] = None
-    has_archive: Optional[bool]
-    has_model: Optional[bool]
-    has_archive_metadata: Optional[bool]
-    is_model_standard: Optional[bool]
-    is_archive_standard: Optional[bool]
-    is_model_metadata_standard: Optional[bool]
-    is_archive_metadata_standard: Optional[bool]
-    is_biomodel: Optional[bool]
-    is_pmr: Optional[bool]
-    random: Optional[bool]
-    metadata: object
+    has_archive: Optional[bool] = None
+    has_model: Optional[bool] = None
+    has_archive_metadata: Optional[bool] = None
+    is_model_standard: Optional[bool] = None
+    is_archive_standard: Optional[bool] = None
+    is_model_metadata_standard: Optional[bool] = None
+    is_archive_metadata_standard: Optional[bool] = None
+    is_biomodel: Optional[bool] = None
+    is_pmr: Optional[bool] = None
+    random: Optional[bool] = None
+    metadata: object = None
     is_manual: bool = False
     subject_type: SubjectType
 
 
-    @validator("subject_type", always=True)
-    def necessary_data_provided(cls, subject_type: str, values: dict):
+    @field_validator("subject_type")
+    @classmethod
+    def necessary_data_provided(cls, subject_type: SubjectType, info: ValidationInfo):
+        values = info.data
         if subject_type is SubjectType.manual:
             if (
                 values.get("has_archive") is None
@@ -129,8 +139,8 @@ class SessionSubjectIn(BaseModel):
                 raise ValueError("HSH assessments need a JSON object")
         return subject_type
 
-    def dict(self, **kwargs):
-        returned_dict = super().dict(**kwargs)
+    def model_dump(self, **kwargs):
+        returned_dict = super().model_dump(**kwargs)
         if returned_dict.get("path") is not None:
             returned_dict["path"] = str(returned_dict["path"])
         return returned_dict
@@ -669,7 +679,7 @@ class SessionHandler:
 
     def json(self):
         """Returns the json representation of the session model"""
-        return self.session_model.json()
+        return self.session_model.model_dump_json()
 
     def dict(self):
-        return self.session_model.dict()
+        return self.session_model.model_dump()

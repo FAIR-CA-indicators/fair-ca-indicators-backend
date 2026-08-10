@@ -38,14 +38,14 @@ def incoperate_results(task_dict: dict, result: 'app.models.TaskStatus', test: b
         return app.models.TaskStatus(result)
     else:
         url = f"http://{config.backend_url}:{config.backend_port}/session/{session_id}/tasks/{task_id}"
-        print(f"--Patching {url}", status.dict())
+        print(f"--Patching {url}", status.model_dump())
         try:
             # Send PATCH request
-            print(f"Patching task {task_dict['id']} with status {status.dict()}")
+            print(f"Patching task {task_dict['id']} with status {status.model_dump()}")
             print(f"Task dict keys: {task_dict.keys()}")
             response = requests.patch(
                 url,
-                json=status.dict(),
+                json=status.model_dump(),
             )
             response.raise_for_status()  # Raise exception for non-2xx response status codes
             #print("---->", response.text, "<----")

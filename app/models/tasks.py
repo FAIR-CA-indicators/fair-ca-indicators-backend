@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from enum import Enum
 from typing import Literal, Union, Annotated, Optional, Dict
 from fastapi import HTTPException
@@ -47,10 +47,11 @@ class TaskStatusIn(BaseModel):
     status: TaskStatus
     force_update: str = ""
 
-    class Config:
-        @staticmethod
-        def schema_extra(schema: dict) -> None:
-            schema["properties"].pop("force_update")
+    @staticmethod
+    def _remove_force_update(schema: dict, model: type) -> None:
+        schema["properties"].pop("force_update")
+
+    model_config = ConfigDict(json_schema_extra=_remove_force_update)
 
 
 class Task(BaseModel):
@@ -83,34 +84,30 @@ class Task(BaseModel):
 
     score: float = 0
 
-    class Config:
-        validate_assignment = True
+    model_config = ConfigDict(validate_assignment=True)
 
     def add_task(self, child: "Task"):
         self.children.update({child.id: child})
 
-    @root_validator
-    def make_score(cls, values: dict) -> dict:
+    @model_validator(mode="after")
+    def make_score(self) -> "Task":
         """
         Calculate the score based on the Task status. This erases possible user
         input in case someone would cheat.
 
-        :param _: The score inputted by user. Not used, but needs to be set
-        :param values: The list of values in the Pydantic object
-        :return: Score value calculated based on Task status
+        :return: self, with score set based on Task status
         """
-        # Necessary to check for status as fields failing validation are not included in values
-        if "status" in values:
-            values["score"] = {
-                TaskStatus.success.value: 1,
-                TaskStatus.failed.value: 0,
-                TaskStatus.warnings.value: 0.5,
-            }.get(values["status"], 0)
-            return values
-        else:
-            raise ValueError("Task status is required to calculate a score")
+        # Set via __dict__ directly (not self.score = ...) to avoid re-triggering
+        # this validator through validate_assignment.
+        self.__dict__["score"] = {
+            TaskStatus.success.value: 1,
+            TaskStatus.failed.value: 0,
+            TaskStatus.warnings.value: 0.5,
+        }.get(self.status, 0)
+        return self
 
-    @validator("name")
+    @field_validator("name")
+    @classmethod
     def has_valid_name(cls, name: str) -> str:
         """
         Asserts that the assessment name given for the task exists in the FAIR indicators
@@ -289,10 +286,10 @@ class AutomatedTask(Task):
         if celery_task is None:
             raise ValueError(f"Task method {self.task_method} was not found")
 
-        celery_task.delay(self.dict(), data)
+        celery_task.delay(self.model_dump(), data)
 
 
 AnyTask = Annotated[Union[AutomatedTask, Task], Field(discriminator="type")]
 
-Task.update_forward_refs()
-AutomatedTask.update_forward_refs()
+Task.model_rebuild()
+AutomatedTask.model_rebuild()

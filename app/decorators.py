@@ -4,23 +4,20 @@ from typing import Type
 from fastapi import Form
 from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel, ValidationError
-from pydantic.fields import ModelField
 
 
 def as_form(cls: Type[BaseModel]):
     new_parameters = []
 
-    for field_name, model_field in cls.__fields__.items():
-        model_field: ModelField
-
+    for field_name, model_field in cls.model_fields.items():
         new_parameters.append(
             inspect.Parameter(
-                model_field.alias,
+                model_field.alias or field_name,
                 inspect.Parameter.POSITIONAL_ONLY,
                 default=Form(...)
-                if model_field.required
+                if model_field.is_required()
                 else Form(model_field.default),
-                annotation=model_field.outer_type_,
+                annotation=model_field.annotation,
             )
         )
 
@@ -31,10 +28,9 @@ def as_form(cls: Type[BaseModel]):
             # Pydantic errors raised while resolving a Depends() callable are not
             # automatically turned into a 422 response by FastAPI (that only
             # happens for its own body/query/path validation) — re-raise as
-            # RequestValidationError so it is. Pass raw_errors (not e.errors(),
-            # which is already flattened) since RequestValidationError flattens
-            # them itself when FastAPI's handler calls .errors() on it.
-            raise RequestValidationError(e.raw_errors)
+            # RequestValidationError so it is. e.errors() is already in the dict
+            # shape RequestValidationError expects.
+            raise RequestValidationError(e.errors())
 
     sig = inspect.signature(as_form_func)
     sig = sig.replace(parameters=new_parameters)
