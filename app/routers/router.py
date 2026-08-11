@@ -6,8 +6,8 @@ from app.models.session import SessionStatus
 from fastapi import APIRouter, HTTPException, UploadFile, Depends, BackgroundTasks
 from typing import List, Optional
 from redis.exceptions import ResponseError
-#import asyncio
 
+# import asyncio
 
 
 from app.models import (
@@ -26,11 +26,12 @@ from app.dependencies.settings import get_settings
 
 base_router = APIRouter()
 
+
 @base_router.post("/session", tags=["Sessions"])
 async def create_session(
     subject: SessionSubjectIn = Depends(SessionSubjectIn.as_form),
     uploaded_file: Optional[UploadFile] = None,
-    metadata: Optional[object] = None
+    metadata: Optional[object] = None,
 ) -> Session:
     """
     Create a new session based on user input
@@ -50,7 +51,6 @@ async def create_session(
     session_id = str(uuid.uuid4())
 
     print("created session " + session_id)
-
 
     if subject.subject_type is SubjectType.url:
         raise HTTPException(
@@ -75,12 +75,13 @@ async def create_session(
     elif subject.subject_type is SubjectType.hsh:
         if not subject.is_manual and subject.metadata is None:
             raise HTTPException(
-                422, "No JSON object was attached for assessment. Impossible to process query"
+                422,
+                "No JSON object was attached for assessment. Impossible to process query",
             )
     try:
         if subject.subject_type is SubjectType.hsh:
             session_handler = SessionHandler.from_hsh(session_id, subject)
-            #session_handler.get(timeout=5)
+            # session_handler.get(timeout=5)
         else:
             session_handler = SessionHandler.from_user_input(session_id, subject)
     except ValueError as e:
@@ -100,7 +101,6 @@ async def create_session(
             await asyncio.sleep(2)
             print("done with ASYNC TASK")
 
-
     except TypeError as e:
         print(session_handler.session_model)
         print(session_handler.session_model.model_dump())
@@ -116,7 +116,9 @@ async def create_session(
 
         except ResponseError as e:
             print(f"An error occurred in Redis: {str(e)}")
-            raise HTTPException(status_code=404, detail="No session with this id was found")
+            raise HTTPException(
+                status_code=404, detail="No session with this id was found"
+            )
 
     return session_handler.session_model
 
@@ -239,7 +241,10 @@ def indicator_description(name: str) -> Indicator:
 
 @base_router.patch("/session/{session_id}/tasks/{task_id}", tags=["Tasks"])
 async def update_task(
-    session_id: str, task_id: str, task_status: TaskStatusIn, background_tasks: BackgroundTasks
+    session_id: str,
+    task_id: str,
+    task_status: TaskStatusIn,
+    background_tasks: BackgroundTasks,
 ) -> Session:
     """
     Edit the status of a Task to the given TaskStatus and recalculate the
@@ -291,7 +296,9 @@ async def update_task(
     handler.update_task_children(task_id)  # no longer dispatches
     handler.update_session_data()
     try:
-        redis_app.json().set(f"session:{session_id}", ".", handler.session_model.model_dump())
+        redis_app.json().set(
+            f"session:{session_id}", ".", handler.session_model.model_dump()
+        )
     except ResponseError as e:
         print(f"An error occurred in Redis: {str(e)}")
         raise HTTPException(status_code=404, detail="No task with this id was found")

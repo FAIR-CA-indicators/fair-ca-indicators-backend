@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 class ManualSessionSubjectFactory(factory.Factory):
     print("manual factory")
+
     class Meta:
         model = SessionSubjectIn
 
@@ -34,6 +35,7 @@ class ManualSessionSubjectFactory(factory.Factory):
 
 class UrlSessionSubjectFactory(factory.Factory):
     print("url factory")
+
     class Meta:
         model = SessionSubjectIn
 
@@ -43,6 +45,7 @@ class UrlSessionSubjectFactory(factory.Factory):
 
 class FileSessionSubjectFactory(factory.Factory):
     print("file factory")
+
     class Meta:
         model = SessionSubjectIn
 
@@ -58,8 +61,10 @@ class FileSessionSubjectFactory(factory.Factory):
         logger.warning(f"Setting session path to {filename}")
         return filename
 
+
 class HSHSessionSubjectFactory(factory.Factory):
     print("hsh factory")
+
     class Meta:
         model = SessionSubjectIn
 

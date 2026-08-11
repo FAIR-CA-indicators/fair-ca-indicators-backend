@@ -13,7 +13,8 @@ from pydantic import (
 )
 from typing import Union, Optional
 from enum import Enum
-#import asyncio
+
+# import asyncio
 
 from .tasks import (
     Task,
@@ -112,7 +113,6 @@ class SessionSubjectIn(BaseModel):
     metadata: object = None
     is_manual: bool = False
     subject_type: SubjectType
-
 
     @field_validator("subject_type")
     @classmethod
@@ -223,7 +223,10 @@ class SessionHandler:
         self.assessed_data: Optional["CombineArchive"] = None
 
         if not session.tasks:
-            if self.user_input.subject_type in [SubjectType.file, SubjectType.url]: #url is currently not supported, thus this step wouldn't be reached for URL support
+            if self.user_input.subject_type in [
+                SubjectType.file,
+                SubjectType.url,
+            ]:  # url is currently not supported, thus this step wouldn't be reached for URL support
                 self.assessed_data = self.retrieve_data(self.user_input.path)
             elif self.user_input.subject_type is SubjectType.hsh:
                 self.assessed_data = self.user_input.metadata
@@ -246,7 +249,7 @@ class SessionHandler:
         :return: A SessionHandler object
         """
         session = Session(id=session_id, session_subject=session_data)
-        #print(cls(session))
+        # print(cls(session))
         """n = 0
         while session.status == "queued" and n < 2:
             print("S-ID", session_id)
@@ -310,7 +313,9 @@ class SessionHandler:
         return cls(session)
 
     @classmethod
-    def from_hsh(cls, session_id: str, session_data: SessionSubjectIn) -> "SessionHandler":
+    def from_hsh(
+        cls, session_id: str, session_data: SessionSubjectIn
+    ) -> "SessionHandler":
         """
         Creates a session based on A JSON from HSH
 
@@ -319,13 +324,11 @@ class SessionHandler:
         :return: A SessionHandler object
         """
 
-
         session = Session(id=session_id, session_subject=session_data)
 
         print(session.id)
 
         return cls(session)
-
 
     def _build_tasks_dict(self, tasks: list[Task]):
         """
@@ -374,14 +377,12 @@ class SessionHandler:
             elif task.status is TaskStatus.started:
                 print("Started!", task.name) """
 
-
         return any(
             [
                 task.status is TaskStatus.queued or task.status is TaskStatus.started
                 for task in all_tasks
             ]
         )
-
 
     def update_session_data(self):
         """
@@ -496,11 +497,14 @@ class SessionHandler:
         # filter fair_indicators for specific session subject
         print("checking here")
         if self.user_input.subject_type is SubjectType.hsh:
-            name_filter = 'HSH'
+            name_filter = "HSH"
         else:
-            name_filter = 'CA'
-        filter_indicators = {key: value for key, value in fair_indicators.items() if value.name.startswith(name_filter)}
-
+            name_filter = "CA"
+        filter_indicators = {
+            key: value
+            for key, value in fair_indicators.items()
+            if value.name.startswith(name_filter)
+        }
 
         for indicator in filter_indicators.values():
             # Skip if task for indicator is already created
@@ -526,7 +530,8 @@ class SessionHandler:
         config = get_settings()
         if not self.user_input.is_manual:
             if (
-                indicator in config.archive_indicators and not self.user_input.has_archive
+                indicator in config.archive_indicators
+                and not self.user_input.has_archive
             ) or (
                 indicator in config.archive_metadata_indicators
                 and not self.user_input.has_archive_metadata
@@ -646,8 +651,13 @@ class SessionHandler:
     async def start_automated_tasks(self):
         """Starts the assessment of automated tasks"""
         print(">>>>>>>start_automated_tasks<<<<<<<<<<<")
+
         def run_task(task):
-            if isinstance(task, AutomatedTask) and task.status is TaskStatus.queued and not task.disabled:
+            if (
+                isinstance(task, AutomatedTask)
+                and task.status is TaskStatus.queued
+                and not task.disabled
+            ):
                 if self.user_input.subject_type is not SubjectType.hsh:
                     task.do_evaluate(self.assessed_data.dict())
                 else:
@@ -658,6 +668,7 @@ class SessionHandler:
             for child in task.children.values():
                 self.update_task_children(task.id)
                 run_task(child)
+
         for task_id in self.indicator_tasks.values():
             task = self.session_model.get_task(task_id)
             run_task(task)
@@ -671,7 +682,11 @@ class SessionHandler:
 
         task = self.session_model.get_task(task_key)
         for child in task.children.values():
-            if isinstance(child, AutomatedTask) and not child.disabled and child.status is TaskStatus.queued:
+            if (
+                isinstance(child, AutomatedTask)
+                and not child.disabled
+                and child.status is TaskStatus.queued
+            ):
                 if self.user_input.subject_type is not SubjectType.hsh:
                     child.do_evaluate(self.assessed_data.dict())
                 else:

@@ -25,6 +25,7 @@ async def get_tasks_definitions(app: FastAPI):
     config = get_settings()
 
     print(config)
+
     def parse_line(line):
         sub_group = regex_joined.search(line["TaskName"])
         if sub_group is None:
@@ -51,6 +52,6 @@ async def get_tasks_definitions(app: FastAPI):
             if parsed_line is not None:
                 print(parsed_line)
                 fair_indicators.update(parsed_line)
-        #[fair_indicators.update(parse_line(line)) for line in csv_reader]
+        # [fair_indicators.update(parse_line(line)) for line in csv_reader]
 
     yield

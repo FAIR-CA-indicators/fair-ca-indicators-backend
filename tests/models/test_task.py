@@ -34,7 +34,9 @@ def test_task_validation_make_score(status):
 # Needs to be async to access fair_indicators global object
 def test_task_validation_valid_name():
     with open("app/metrics/metrics.csv", "r") as metrics_file:
-        indicators = [line["TaskName"] for line in DictReader(metrics_file, dialect="unix")]
+        indicators = [
+            line["TaskName"] for line in DictReader(metrics_file, dialect="unix")
+        ]
 
     for indicator in indicators:
         TaskFactory(name=indicator)
