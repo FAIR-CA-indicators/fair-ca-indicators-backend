@@ -1,22 +1,22 @@
 import os
 
 from functools import lru_cache
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from typing import List
 
 
 class Config(BaseSettings):
     app_name: str = "FAIR Combine API"
-    backend_url = os.environ.get("BACKEND_URL", "localhost")
-    backend_port = os.environ.get("BACKEND_PORT", 8000)
-    redis_url = os.environ.get("REDIS_URL", "localhost")
-    redis_port = os.environ.get("REDIS_PORT", 6379)
+    backend_url: str = os.environ.get("BACKEND_URL", "localhost")
+    backend_port: int = os.environ.get("BACKEND_PORT", 8000)
+    redis_url: str = os.environ.get("REDIS_URL", "localhost")
+    redis_port: int = os.environ.get("REDIS_PORT", 6379)
     redis_db_number: int = 0
-    indicators_path = "app/metrics/metrics.csv"  #this loads the indicators
-    celery_broker = os.environ.get(
+    indicators_path: str = "app/metrics/metrics.csv"  #this loads the indicators
+    celery_broker: str = os.environ.get(
         "CELERY_BROKER_URL", f"redis://{redis_url}:{redis_port}/{redis_db_number}"
     )
-    celery_key = os.environ.get("CELERY_SECRET_KEY")  # KEEP HIDDEN
+    celery_key: str = os.environ.get("CELERY_SECRET_KEY")  # KEEP HIDDEN
     if not celery_key:
         raise ValueError("A secret key is necessary for celery to interact with the application")
 
@@ -172,7 +172,7 @@ class ProdConfig(Config):
 
 
 class TestConfig(Config):
-    redis_db_number = 15
+    redis_db_number: int = 15
 
 
 @lru_cache()
