@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM python:3.9 as main
+FROM python:3.11 as main
 LABEL authors="francois.ancien"
 
 
